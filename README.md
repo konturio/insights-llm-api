@@ -34,8 +34,10 @@ docker build -t llm-analytics:latest .
 Run server
 
 ```shell
-docker run --rm -it -p 8000:8000 --env-file .env --name llm-analytics llm-analytics 
+docker run --rm -it --network=host --env-file .env --name llm-analytics llm-analytics
 ```
+
+`--network=host` is needed to access local db
 
 ### Liveness route
 
