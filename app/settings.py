@@ -19,6 +19,7 @@ class Settings:
     PGUSER: str = None
 
     USER_AGENT: str = 'insights-llm-api'
+    LLM_MODEL_NAME: str = None
 
     def __post_init__(self):
         config = Config('../.env')
