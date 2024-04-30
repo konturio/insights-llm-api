@@ -1,3 +1,5 @@
+import hashlib
+
 import asyncpg
 from aiohttp import ClientSession
 from starlette.responses import JSONResponse
@@ -34,6 +36,19 @@ async def llm_analytics(request: 'Request') -> 'Response':
             data = await resp.json()
     user = data['username']
     bio = data['bio']
-    data = {'data': f'personalized analytics summary for {user} with bio {bio}'}
-    return JSONResponse(data)
+    conn = await get_db_conn()
+    llm_request = f"generated request for some polygon, analytics and {bio}"
+    cache_key = hashlib.md5(llm_request.encode("utf-8")).hexdigest()
+
+    if result := await conn.fetchval('select response from llm_cache where hash = $1', cache_key):
+        await conn.close()
+        return JSONResponse({'data': result})
+
+    llm_response = f'personalized analytics summary for {user} with bio {bio}'
+    await conn.execute(
+        'insert into llm_cache (hash, request, response) values ($1, $2, $3)',
+        cache_key, llm_request, llm_response
+    )
+    await conn.close()
+    return JSONResponse({'data': llm_response})
 
