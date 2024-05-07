@@ -46,7 +46,7 @@ async def llm_analytics(request: 'Request') -> 'Response':
     Handles GET requests to /llm-analytics.
 
     Request format:
-        - 'area' (str): A GeoJSON string representing the selected area.
+        - 'area' (dict): A GeoJSON representing the selected area.
 
     Response format:
         - 'data' (str): analytics for selected area in markdown format
