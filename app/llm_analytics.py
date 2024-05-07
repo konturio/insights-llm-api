@@ -29,6 +29,7 @@ def md5_to_uuid(s):
 
 
 async def get_user_data(auth_token: str) -> dict:
+    return {}
     url = settings.USER_PROFILE_API_URL + '/users/current_user'
     headers = {
         'Authorization': auth_token,

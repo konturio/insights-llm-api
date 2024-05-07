@@ -32,7 +32,7 @@ def get_llm_prompt(sentences: list[str], bio: str) -> str:
 
 async def get_llm_commentary(prompt: str) -> str:
     client = AsyncOpenAI(api_key=secret.OPENAI_API_KEY, timeout=40.0)
-    assistant = [i async for i in client.beta.assistants.list() if i.name == "Insights magician"][0]
+    assistant = [i async for i in client.beta.assistants.list() if i.name == settings.OPENAI_ASSISTANT][0]
     thread = await client.beta.threads.create()
     current_chunk = ''
     for line in prompt.split('\n'):            
@@ -51,9 +51,9 @@ async def get_llm_commentary(prompt: str) -> str:
             content=current_chunk
         )
     run = await client.beta.threads.runs.create(
-      thread_id=thread.id,
-      assistant_id=assistant.id,
-      instructions=settings.OPENAI_INSTRUCTIONS,
+        thread_id=thread.id,
+        assistant_id=assistant.id,
+        instructions=settings.OPENAI_INSTRUCTIONS,
     )
 
     while not run.status == "completed":

@@ -43,6 +43,7 @@ async def get_analytics_sentences(selected_area: dict, aoi: dict = None) -> list
         analytics_selected_area = await get_analytics_from_insights_api(session, selected_area)
         # TODO 18291: analytics_aoi = await get_analytics_from_insights_api(session, aoi))
         analytics_world = await get_analytics_from_insights_api(session)
+        # TODO: retrieve indicator units via bivariateStatistic/indicators and use them in to_readable_sentence()
 
     calculations_world = get_world_stats(analytics_world)
     sorted_calculations = get_area_stats(calculations_world, analytics_selected_area)
