@@ -20,6 +20,8 @@ class Settings:
 
     USER_AGENT: str = 'insights-llm-api'
     LLM_MODEL_NAME: str = None
+    OPENAI_INSTRUCTIONS: str = None
+    OPENAI_CONTEXT_LENGTH: int = 32000
 
     def __post_init__(self):
         config = Config('../.env')

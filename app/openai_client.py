@@ -1,0 +1,78 @@
+import asyncio
+import re
+
+from openai import AsyncOpenAI
+from starlette.exceptions import HTTPException
+
+from secret import Secret
+from settings import Settings
+
+secret = Secret()
+settings = Settings()
+
+
+def get_llm_prompt(sentences: list[str], bio: str) -> str:
+    # TODO: retrieve a name from selected_area['features'][0]['properties']
+    prompt_start = 'Here is description for the user\'s selected area compared to reference of the world:'
+    prompt_end = f'What user wrote about themself: {bio} '
+
+    # decide how many sentences we can send respecting max context length
+    limit = settings.OPENAI_CONTEXT_LENGTH - len(prompt_start) - len(prompt_end)
+    num_sentences = 0
+    for s in sentences:
+        limit -= len(s)
+        if limit < 0:
+            break
+        num_sentences += 1
+    #print('num_sentences', num_sentences, 'of', len(sentences))
+    analytics_txt = ';\n'.join(sentences[:num_sentences])
+
+    return re.sub(r'\s+', ' ', f'{prompt_start} {analytics_txt} {prompt_end}')
+
+
+async def get_llm_commentary(prompt: str) -> str:
+    client = AsyncOpenAI(api_key=secret.OPENAI_API_KEY, timeout=40.0)
+    assistant = [i async for i in client.beta.assistants.list() if i.name == "Insights magician"][0]
+    thread = await client.beta.threads.create()
+    current_chunk = ''
+    for line in prompt.split('\n'):            
+        if len(current_chunk) > 20000:                
+            message = await client.beta.threads.messages.create(
+                thread_id=thread.id,
+                role="user",
+                content=current_chunk
+            )
+            current_chunk = ''
+        current_chunk += line + '\n'
+    if current_chunk:
+        message = await client.beta.threads.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=current_chunk
+        )
+    run = await client.beta.threads.runs.create(
+      thread_id=thread.id,
+      assistant_id=assistant.id,
+      instructions=settings.OPENAI_INSTRUCTIONS,
+    )
+
+    while not run.status == "completed":
+        await asyncio.sleep(1)
+        run = await client.beta.threads.runs.retrieve(
+            thread_id=thread.id,
+            run_id=run.id
+        )
+        #print(run.status)
+        if run.status == "failed":
+            raise HTTPException(status_code=400, detail='failed to get OpenAI response')
+        
+    messages = await client.beta.threads.messages.list(
+      thread_id=thread.id
+    )
+
+    message_text = ""
+    for _, message in messages:
+        return message[0].content[0].text.value
+        break
+
+    return message_text

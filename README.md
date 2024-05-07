@@ -46,8 +46,61 @@ with HTTP code 200.
 
 ### check llm-analytics api
 
-get auth token from keycloak and then send the GET request:
+get auth token from keycloak and then do POST:
 
 ```shell
-curl -H 'Authorization: Bearer your_long_token' http://127.0.0.1:8000/llm-analytics
+curl http://localhost:8000/llm-analytics \
+  -H 'Authorization: Bearer your_long_auth_token' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "area": {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-77.034084142948, 38.909671288923],
+            [-77.034084142948, 38.919671288923],
+            [-77.014084142948, 38.919671288923],
+            [-77.014084142948, 38.909671288923],
+            [-77.034084142948, 38.909671288923]
+          ]
+        ]
+      },
+      "properties": {
+        "name": "Area name"
+      }
+    }
+  }'
+```
+
+also works with FeatureCollection:
+
+```shell
+curl http://localhost:8000/llm-analytics \
+    -H 'Authorization: Bearer your_long_auth_token' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "area": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [-77.034084142948, 38.909671288923],
+                [-77.034084142948, 38.919671288923],
+                [-77.014084142948, 38.919671288923],
+                [-77.014084142948, 38.909671288923],
+                [-77.034084142948, 38.909671288923]
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  }'
 ```
