@@ -5,9 +5,9 @@ from starlette.applications import Starlette
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 
-from settings import Settings
-from secret import Secret
-from llm_analytics import llm_analytics
+from .settings import Settings
+from .secret import Secret
+from .llm_analytics import llm_analytics
 
 
 settings = Settings()
@@ -43,4 +43,4 @@ def create_app():
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run(create_app, host="127.0.0.1", port=8000, factory=True, debug=settings.DEBUG)
+    uvicorn.run(create_app, host="0.0.0.0", port=settings.PORT, factory=True, log_config=settings.LOG_CONFIG)

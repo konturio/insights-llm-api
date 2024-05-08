@@ -4,12 +4,21 @@ import ujson as json
 from starlette.exceptions import HTTPException
 from aiohttp import ClientSession
 
-from settings import Settings
-from logger import LOGGER
+from .settings import Settings
+from .logger import LOGGER
 
 settings = Settings()
 
-graphql = """
+indicators_graphql = """
+{
+  polygonStatistic (polygonStatisticRequest: {polygon: "%s"})
+  {
+      bivariateStatistic{indicators{name, unit{id}}}
+  }
+}
+"""
+
+advanced_analytics_graphql = """
 {
   polygonStatistic (polygonStatisticRequest: {polygon: "%s"})
   {
@@ -40,23 +49,25 @@ async def get_analytics_sentences(selected_area: dict, aoi: dict = None) -> list
         'User-Agent': settings.USER_AGENT,
     }
     async with ClientSession(headers=headers) as session:
-        analytics_selected_area = await get_analytics_from_insights_api(session, selected_area)
-        # TODO 18291: analytics_aoi = await get_analytics_from_insights_api(session, aoi))
-        analytics_world = await get_analytics_from_insights_api(session)
-        # TODO: retrieve indicator units via bivariateStatistic/indicators and use them in to_readable_sentence()
+        analytics_selected_area = await query_insights_api(session, advanced_analytics_graphql, selected_area)
+        # TODO 18291: analytics_aoi = await query_insights_api(session, advanced_analytics_graphql, aoi))
+        analytics_world = await query_insights_api(session, advanced_analytics_graphql)
+        units = await query_insights_api(session, indicators_graphql)
 
-    calculations_world = get_world_stats(analytics_world)
-    sorted_calculations = get_area_stats(calculations_world, analytics_selected_area)
-    return to_readable_sentence(sorted_calculations, calculations_world)
+    calculations_world = flatten_analytics(analytics_world, units)
+    calculations_area = flatten_analytics(analytics_selected_area, units)
+    sorted_calculations = get_sorted_area_stats(calculations_world, calculations_area)
+
+    return to_readable_sentence(sorted_calculations, calculations_world, units)
 
 
-async def get_analytics_from_insights_api(session: ClientSession, geojson=None) -> dict:
+async def query_insights_api(session: ClientSession, graphql: str, geojson=None) -> dict:
     '''
-    send advancedAnalytics graphql query to insights-api service for provided geojson
+    send graphql query to insights-api service for provided geojson
     '''
     geojson = json.dumps(geojson) if geojson else '{"type":"FeatureCollection","features":[]}'
     query = graphql % geojson.replace('"','\\"')
-    #print(query)
+    LOGGER.debug(query)
     async with session.post(settings.INSIGHTS_API_URL, json={'query': query}) as resp:
         if resp.status != 200:
             raise HTTPException(status_code=resp.status)
@@ -67,11 +78,18 @@ async def get_analytics_from_insights_api(session: ClientSession, geojson=None) 
         return data
 
 
-def get_world_stats(data: dict) -> dict[tuple, dict]:
+def flatten_analytics(data: dict, units: dict) -> dict[tuple, dict]:
     '''
-    flatten advancedAnalytics response for the world
-    and create a dict (calculation, numerator, denominator) -> {calc_data}
+    flatten advancedAnalytics response for the world, add units
+    and return a dict (calculation, numerator, denominator) -> {calc_data}
     '''
+    units = {
+        x['name']: x['unit']['id']
+        for x in units['data']['polygonStatistic']['bivariateStatistic']['indicators']
+    }
+    # possible units are:
+    # nW_cm2_sr None celc_deg km2 m days fract ppl deg m_s2 W_m2 h USD other n km unixtime index
+
     calculations_world = {}
     for item in data['data']['polygonStatistic']['analytics']['advancedAnalytics']:
         numerator = item['numerator']
@@ -79,61 +97,46 @@ def get_world_stats(data: dict) -> dict[tuple, dict]:
         numeratorLabel = item['numeratorLabel']
         denominatorLabel = item['denominatorLabel']
 
+        if numeratorLabel == "Population (previous version)":
+            continue
+
         # Iterate over each 'analytics' entry and add a dictionary for each calculation to the list
         for analytic in item['analytics']:
+            if analytic.get('value') is None:
+                continue
             calculation = analytic['calculation']
-            if 'value' in analytic:
-                value = analytic['value']
-                quality = analytic['quality']
-                calculations_world[(calculation, numerator, denominator)] = {
-                    'numerator': numerator,
-                    'denominator': denominator,
-                    'numeratorLabel': numeratorLabel,
-                    'denominatorLabel': denominatorLabel,
-                    'calculation': calculation,
-                    'value': value,
-                    'quality': quality
-                }
+            value = analytic['value']
+            quality = analytic['quality']
+            calculations_world[(calculation, numerator, denominator)] = {
+                'numerator': numerator,
+                'denominator': denominator,
+                'numeratorLabel': numeratorLabel,
+                'denominatorLabel': denominatorLabel,
+                'calculation': calculation,
+                'value': value,
+                'quality': quality,
+                'numeratorUnit': units[numerator],
+                'denominatorUnit': units[denominator],
+            }
     return calculations_world
 
 
-def get_area_stats(calculations_world: dict[tuple, dict], data: dict) -> list[dict]:
+def get_sorted_area_stats(calculations_world: dict[tuple, dict], calculations_area: dict[tuple, dict]) -> list[dict]:
     '''
-    flatten advancedAnalytics response for the polygon (AOI or selected area)
-    and create a list [{calc_data}] sorted by quality, sigma, numerator & value
+    add sigma to area analytics compared to the world mean metric
+    and return a list [{calc_data}] sorted by quality, sigma, numerator & value
     '''
-    calculations = []
-    for item in data['data']['polygonStatistic']['analytics']['advancedAnalytics']:
-        numerator = item['numerator']
-        denominator = item['denominator']
-        numeratorLabel = item['numeratorLabel']
-        denominatorLabel = item['denominatorLabel']
-
-        for analytic in item['analytics']:
-            calculation = analytic['calculation']
-            if analytic.get('value') is not None:
-                value = analytic['value']
-                quality = analytic['quality']
-                world_key = (calculation, numerator, denominator)
-                sigma = 0
-                if world_key in calculations_world and calculation == 'mean':
-                    sigma = abs(
-                        (value - calculations_world[world_key]["value"]) /
-                        calculations_world[("stddev", numerator, denominator)]["value"]
-                    )
-                calculations.append({
-                    'numerator': numerator,
-                    'denominator': denominator,
-                    'numeratorLabel': numeratorLabel,
-                    'denominatorLabel': denominatorLabel,
-                    'calculation': calculation,
-                    'value': value,
-                    'quality': quality,
-                    'sigma': sigma
-                })
+    for world_key, v in calculations_area.items():
+        calculation, numerator, denominator = world_key
+        v['sigma'] = 0
+        if calculation == 'mean' and world_key in calculations_world:
+            v['sigma'] = abs(
+                (v['value'] - calculations_world[world_key]["value"]) /
+                calculations_world[("stddev", numerator, denominator)]["value"]
+            )
 
     # Sort the list of calculations by the absolute value of the quality in ascending order
-    return sorted(calculations, key=lambda x: (
+    return sorted(calculations_area.values(), key=lambda x: (
         int(abs(x['quality'])), -x['sigma'], x['numerator'], x['value']
     ))
 
@@ -146,8 +149,6 @@ def to_readable_sentence(selected_area_data: list[dict], world_data: dict[tuple,
 
     for entry in selected_area_data:
         numerator_label = entry['numeratorLabel']
-        if numerator_label == "Population (previous version)":
-            continue
         
         if entry['denominatorLabel'] == "Area":
             entry['denominatorLabel'] = "area km2"
@@ -164,7 +165,7 @@ def to_readable_sentence(selected_area_data: list[dict], world_data: dict[tuple,
             world_value = world_data[world_key]["value"]
             world_value_formatted = (f"{world_value:.2f}" if world_value > 1e-3 else f"{world_value:.2e}")
             
-            if (entry['numeratorLabel'] in ("OSM: last edit", "OSM: first edit", "OSM: last edit (avg)")
+            if (entry['numeratorUnit'] == 'unixtime'
                     and entry['denominatorLabel'] == "1"
                     and world_value < 2000000000):
                 world_value_formatted = datetime.fromtimestamp(int(world_data[world_key]["value"])).isoformat()
@@ -177,9 +178,9 @@ def to_readable_sentence(selected_area_data: list[dict], world_data: dict[tuple,
         
         sigma_str = ""
         if entry["sigma"]:
-            sigma_str = " ("+ (f"{value:.2f}" if value > 1e-3 else f"{value:.2e}") +" sigma)"
+            sigma_str = " ("+ (f"{entry['sigma']:.2f}" if entry["sigma"] > 1e-3 else f"{entry['sigma']:.2e}") +" sigma)"
         
-        if (entry['numeratorLabel'] in ("OSM: last edit", "OSM: first edit", "OSM: last edit (avg)")
+        if (entry['numeratorUnit'] == 'unixtime'
                 and entry['denominatorLabel'] == "1" 
                 and value < 2000000000):
             value_str = datetime.fromtimestamp(int(value)).isoformat()

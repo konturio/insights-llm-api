@@ -19,8 +19,14 @@ pip install -r requirements.txt
 Run server
 
 ```shell
-export $(grep -v '^#' .env | xargs -0) 
-python3 app/main.py
+grep -v '^#' .env | grep -v '^$' | sed -e 's/^/export /' -e "s/=/='/" -e "s/$/'/" | bash
+python3 -m app.main
+```
+
+Run tests
+
+```shell
+python tests/test_analytics.py
 ```
 
 ### Docker

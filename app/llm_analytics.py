@@ -5,10 +5,11 @@ from aiohttp import ClientSession
 from starlette.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from secret import Secret
-from settings import Settings
-from insights_api_client import get_analytics_sentences
-from openai_client import get_llm_commentary, get_llm_prompt
+from .secret import Secret
+from .settings import Settings
+from .logger import LOGGER
+from .insights_api_client import get_analytics_sentences
+from .openai_client import get_llm_commentary, get_llm_prompt
 
 settings = Settings()
 secret = Secret()
@@ -29,7 +30,6 @@ def md5_to_uuid(s):
 
 
 async def get_user_data(auth_token: str) -> dict:
-    return {}
     url = settings.USER_PROFILE_API_URL + '/users/current_user'
     headers = {
         'Authorization': auth_token,
@@ -44,7 +44,7 @@ async def get_user_data(auth_token: str) -> dict:
 
 async def llm_analytics(request: 'Request') -> 'Response':
     '''
-    Handles GET requests to /llm-analytics.
+    Handles POST requests to /llm-analytics.
 
     Request format:
         - 'area' (dict): A GeoJSON representing the selected area.
@@ -52,13 +52,15 @@ async def llm_analytics(request: 'Request') -> 'Response':
     Response format:
         - 'data' (str): analytics for selected area in markdown format
     '''
-    # go to UPS to collect user info (bio)
+    LOGGER.debug('asking UPS for user data..')
     user_data = await get_user_data(auth_token=request.headers.get('Authorization') or '')
+    LOGGER.debug('got user data')
     bio = user_data.get('bio')
 
-    # get analytics from insights-api service
     data = await request.json()
+    LOGGER.debug('asking insights-api for advanced analytics..')
     sentences = await get_analytics_sentences(selected_area=data.get("area"), aoi=None)
+    LOGGER.debug('got advanced analytics')
 
     # build cache key from request and check if it's in llm_cache table
     llm_request = get_llm_prompt(sentences, bio)
@@ -69,13 +71,15 @@ async def llm_analytics(request: 'Request') -> 'Response':
             'select response from llm_cache where hash = $1 and model_name = $2',
             cache_key, settings.LLM_MODEL_NAME):
         await conn.close()
+        LOGGER.debug('found LLM response in the cache')
         return JSONResponse({'data': result})
 
-    # ask LLM for analytics and save its response to llm_cache
+    LOGGER.debug('asking LLM for commentary..')
     llm_response = await get_llm_commentary(llm_request)
     await conn.execute(
         'insert into llm_cache (hash, request, response, model_name) values ($1, $2, $3, $4)',
         cache_key, llm_request, llm_response, settings.LLM_MODEL_NAME,
     )
     await conn.close()
+    LOGGER.debug('saved LLM response')
     return JSONResponse({'data': llm_response})

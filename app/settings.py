@@ -1,5 +1,5 @@
 from typing import Dict
-from dataclasses import dataclass, fields, replace, asdict
+from dataclasses import dataclass, field, fields, replace, asdict
 from starlette.config import Config
 
 
@@ -8,6 +8,7 @@ class Settings:
     SENTRY_ENV: str = 'test'
     SENTRY_ENABLED: bool = True
 
+    PORT: int = 8000
     DEBUG: bool = False
 
     INSIGHTS_API_URL: str = None
@@ -23,6 +24,31 @@ class Settings:
     OPENAI_INSTRUCTIONS: str = None
     OPENAI_CONTEXT_LENGTH: int = 32000
     OPENAI_ASSISTANT: str = None
+
+    @property
+    def LOG_CONFIG(self):
+        return {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'formatters': {
+                'json': {
+                    '()': 'uvicorn.logging.DefaultFormatter',
+                    'fmt': '{"level":"%(levelname)s", "timestamp":"%(asctime)s", "message":"%(message)s", "logger":"%(name)s"}'
+                }
+            },
+            'handlers': {
+                'default': {
+                    'formatter': 'json',
+                    'class': 'logging.StreamHandler'
+                }
+            },
+            'loggers': {
+                'uvicorn': {
+                    'handlers': ['default'],
+                    'level': 'DEBUG' if self.DEBUG else 'INFO'
+                }
+            }
+        }
 
     def __post_init__(self):
         config = Config('../.env')

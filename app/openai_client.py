@@ -4,8 +4,9 @@ import re
 from openai import AsyncOpenAI
 from starlette.exceptions import HTTPException
 
-from secret import Secret
-from settings import Settings
+from .secret import Secret
+from .settings import Settings
+from .logger import LOGGER
 
 secret = Secret()
 settings = Settings()
@@ -24,7 +25,7 @@ def get_llm_prompt(sentences: list[str], bio: str) -> str:
         if limit < 0:
             break
         num_sentences += 1
-    #print('num_sentences', num_sentences, 'of', len(sentences))
+    LOGGER.debug('num_sentences: %s of %s', num_sentences, len(sentences))
     analytics_txt = ';\n'.join(sentences[:num_sentences])
 
     return re.sub(r'\s+', ' ', f'{prompt_start} {analytics_txt} {prompt_end}')
@@ -32,7 +33,9 @@ def get_llm_prompt(sentences: list[str], bio: str) -> str:
 
 async def get_llm_commentary(prompt: str) -> str:
     client = AsyncOpenAI(api_key=secret.OPENAI_API_KEY, timeout=40.0)
+    LOGGER.debug('looking for %s assistant..', settings.OPENAI_ASSISTANT)
     assistant = [i async for i in client.beta.assistants.list() if i.name == settings.OPENAI_ASSISTANT][0]
+    LOGGER.debug('chatGPT instructions: %s', settings.OPENAI_INSTRUCTIONS)
     thread = await client.beta.threads.create()
     current_chunk = ''
     for line in prompt.split('\n'):            
@@ -62,7 +65,7 @@ async def get_llm_commentary(prompt: str) -> str:
             thread_id=thread.id,
             run_id=run.id
         )
-        #print(run.status)
+        LOGGER.debug("openAI thread status: %s", run.status)
         if run.status == "failed":
             raise HTTPException(status_code=400, detail='failed to get OpenAI response')
         
