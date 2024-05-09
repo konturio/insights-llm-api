@@ -75,7 +75,7 @@ async def get_llm_commentary(prompt: str) -> str:
 
     message_text = ""
     for _, message in messages:
-        return message[0].content[0].text.value
+        message_text = message[0].content[0].text.value
         break
 
     return message_text
