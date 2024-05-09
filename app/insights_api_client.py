@@ -80,7 +80,7 @@ async def query_insights_api(session: ClientSession, graphql: str, geojson=None)
 
 def flatten_analytics(data: dict, units: dict) -> dict[tuple, dict]:
     '''
-    flatten advancedAnalytics response for the world, add units
+    flatten advancedAnalytics response for the world or selected area, add units
     and return a dict (calculation, numerator, denominator) -> {calc_data}
     '''
     units = {
