@@ -19,7 +19,7 @@ pip install -r requirements.txt
 Run server
 
 ```shell
-grep -v '^#' .env | grep -v '^$' | sed -e 's/^/export /' -e "s/=/='/" -e "s/$/'/" | bash
+set -a; . <(grep -v '^#' .env | grep -v '^$' | sed -e "s/=/='/" -e "s/$/'/")
 python3 -m app.main
 ```
 

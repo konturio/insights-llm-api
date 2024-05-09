@@ -52,13 +52,13 @@ async def llm_analytics(request: 'Request') -> 'Response':
     Response format:
         - 'data' (str): analytics for selected area in markdown format
     '''
-    LOGGER.debug('asking UPS for user data..')
+    LOGGER.debug(f'asking UPS {settings.USER_PROFILE_API_URL} for user data..')
     user_data = await get_user_data(auth_token=request.headers.get('Authorization') or '')
     LOGGER.debug('got user data')
     bio = user_data.get('bio')
 
     data = await request.json()
-    LOGGER.debug('asking insights-api for advanced analytics..')
+    LOGGER.debug(f'asking insights-api {settings.INSIGHTS_API_URL} for advanced analytics..')
     sentences = await get_analytics_sentences(selected_area=data.get("area"), aoi=None)
     LOGGER.debug('got advanced analytics')
 
