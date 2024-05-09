@@ -8,6 +8,7 @@ from starlette.datastructures import Secret as StarletteSecret
 class Secret:
     SENTRY_DSN: str = None
     PGPASSWORD: str = None
+    OPENAI_API_KEY: str = None
 
     def __post_init__(self):
         config = Config('../.env')
