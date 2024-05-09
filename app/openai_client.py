@@ -14,8 +14,8 @@ settings = Settings()
 
 def get_llm_prompt(sentences: list[str], bio: str) -> str:
     # TODO: retrieve a name from selected_area['features'][0]['properties']
-    prompt_start = 'Here is description for the user\'s selected area compared to reference of the world:'
-    prompt_end = f'What user wrote about themself: {bio} '
+    prompt_start = 'Here is the description of the user\'s selected area compared to the world for the reference:'
+    prompt_end = f'What the user wrote about themselves: "{bio}" '
 
     # decide how many sentences we can send respecting max context length
     limit = settings.OPENAI_CONTEXT_LENGTH - len(prompt_start) - len(prompt_end)
