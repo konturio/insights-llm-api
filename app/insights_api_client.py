@@ -40,7 +40,7 @@ advanced_analytics_graphql = """
 """
 
 
-async def get_analytics_sentences(selected_area: dict, aoi: dict = None) -> list[str]:
+async def get_analytics_sentences(selected_area: dict, aoi: dict) -> list[str]:
     '''
     accepts selected_area and aoi as geojson.
     returns textual description of indicators stats for selected_area compared to world and AOI
@@ -50,15 +50,18 @@ async def get_analytics_sentences(selected_area: dict, aoi: dict = None) -> list
     }
     async with ClientSession(headers=headers) as session:
         analytics_selected_area = await query_insights_api(session, advanced_analytics_graphql, selected_area)
-        # TODO 18291: analytics_aoi = await query_insights_api(session, advanced_analytics_graphql, aoi))
+        analytics_aoi = {}
+        if aoi:
+            analytics_aoi = await query_insights_api(session, advanced_analytics_graphql, aoi)
         analytics_world = await query_insights_api(session, advanced_analytics_graphql)
         units = await query_insights_api(session, indicators_graphql)
 
     calculations_world = flatten_analytics(analytics_world, units)
-    calculations_area = flatten_analytics(analytics_selected_area, units)
-    sorted_calculations = get_sorted_area_stats(calculations_world, calculations_area)
+    calculations_selected_area = flatten_analytics(analytics_selected_area, units)
+    calculations_aoi = flatten_analytics(analytics_aoi, units) if aoi else {}
+    sorted_calculations = get_sorted_area_stats(calculations_world, calculations_selected_area, calculations_aoi)
 
-    return to_readable_sentence(sorted_calculations, calculations_world, units)
+    return to_readable_sentence(sorted_calculations, calculations_world, calculations_aoi, units)
 
 
 async def query_insights_api(session: ClientSession, graphql: str, geojson=None) -> dict:
@@ -67,7 +70,7 @@ async def query_insights_api(session: ClientSession, graphql: str, geojson=None)
     '''
     geojson = json.dumps(geojson) if geojson else '{"type":"FeatureCollection","features":[]}'
     query = graphql % geojson.replace('"','\\"')
-    LOGGER.debug(query)
+    #LOGGER.debug(query)
     async with session.post(settings.INSIGHTS_API_URL, json={'query': query}) as resp:
         if resp.status != 200:
             raise HTTPException(status_code=resp.status)
@@ -121,74 +124,107 @@ def flatten_analytics(data: dict, units: dict) -> dict[tuple, dict]:
     return calculations_world
 
 
-def get_sorted_area_stats(calculations_world: dict[tuple, dict], calculations_area: dict[tuple, dict]) -> list[dict]:
+def calc_sigma(calculations: dict, ref: dict, key: tuple) -> float:
+    '''
+    return sigma only for 'mean' calculation
+    '''
+    stddev_key = 'stddev', *key[1:]
+    if key[0] != 'mean' or key not in ref or stddev_key not in ref:
+        return 0
+
+    return abs(
+        (calculations['value'] - ref[key]["value"]) /
+        ref[stddev_key]["value"]
+    )
+
+
+def get_sorted_area_stats(
+        calculations_world: dict[tuple, dict],
+        calculations_area: dict[tuple, dict],
+        calculations_aoi: dict[tuple, dict],
+) -> list[dict]:
     '''
     add sigma to area analytics compared to the world mean metric
     and return a list [{calc_data}] sorted by quality, sigma, numerator & value
     '''
-    for world_key, v in calculations_area.items():
-        calculation, numerator, denominator = world_key
-        v['sigma'] = 0
-        if calculation == 'mean' and world_key in calculations_world:
-            v['sigma'] = abs(
-                (v['value'] - calculations_world[world_key]["value"]) /
-                calculations_world[("stddev", numerator, denominator)]["value"]
-            )
+    for key, v in calculations_area.items():
+        v['world_sigma'] = calc_sigma(v, calculations_world, key)
+        v['aoi_sigma'] = calc_sigma(v, calculations_aoi, key)
 
+    sort_by_sigma = 'aoi_sigma' if calculations_aoi else 'world_sigma'
     # Sort the list of calculations by the absolute value of the quality in ascending order
     return sorted(calculations_area.values(), key=lambda x: (
-        int(abs(x['quality'])), -x['sigma'], x['numerator'], x['value']
+        int(abs(x['quality'])), -x[sort_by_sigma], x['numerator'], x['value']
     ))
 
 
-def to_readable_sentence(selected_area_data: list[dict], world_data: dict[tuple, dict], aoi_data=None) -> list[str]:
+def float_to_str(x):
+    # Format the value to be more readable, especially handling scientific notation.
+    return f'{x:.2f}' if x > 1e-3 else f'{x:.2e}'
+
+
+def value_to_str(x: float, entry: dict):
+    if x is None:
+        return ''
+
+    if (entry['numeratorUnit'] == 'unixtime'
+            and entry['denominatorLabel'] == '1'
+            and x < 2000000000):
+        return datetime.fromtimestamp(int(x)).isoformat()
+
+    return float_to_str(x)
+
+
+def to_readable_sentence(
+        selected_area_data: list[dict],
+        world_data: dict[tuple, dict],
+        aoi_data: dict[tuple, dict] = None,
+        units: dict = None,
+) -> list[str]:
     '''
-    compose a list of readable sentences that describe analytics for selected_area, world and aoi
+    compose a list of readable sentences that describe analytics
+    for selected_area, world and aoi (Area Of Interest)
     '''
     readable_sentences = []
 
     for entry in selected_area_data:
         numerator_label = entry['numeratorLabel']
-        
+
         if entry['denominatorLabel'] == "Area":
             entry['denominatorLabel'] = "area km2"
         denominator_label = " over " + entry['denominatorLabel']
         if entry['denominatorLabel'] == "1":
             denominator_label = ""
-        calculation_type = entry['calculation'] #.capitalize()
-        value = entry['value']
-        quality = entry['quality']
-        
-        world_key = (entry['calculation'], entry['numerator'], entry['denominator'])
-        world_value = ""
-        if world_key in world_data and world_data[world_key]["value"] is not None:
-            world_value = world_data[world_key]["value"]
-            world_value_formatted = (f"{world_value:.2f}" if world_value > 1e-3 else f"{world_value:.2e}")
-            
-            if (entry['numeratorUnit'] == 'unixtime'
-                    and entry['denominatorLabel'] == "1"
-                    and world_value < 2000000000):
-                world_value_formatted = datetime.fromtimestamp(int(world_data[world_key]["value"])).isoformat()
-            
-            world_value = " (globally "+ world_value_formatted+ ")"
-            quality = (quality + world_data[world_key]["quality"])/2
 
-        # Format the value and quality to be more readable, especially handling scientific notation.
-        value_str = f"{value:.2f}" if value > 1e-3 else f"{value:.2e}"
-        
-        sigma_str = ""
-        if entry["sigma"]:
-            sigma_str = " ("+ (f"{entry['sigma']:.2f}" if entry["sigma"] > 1e-3 else f"{entry['sigma']:.2e}") +" sigma)"
-        
-        if (entry['numeratorUnit'] == 'unixtime'
-                and entry['denominatorLabel'] == "1" 
-                and value < 2000000000):
-            value_str = datetime.fromtimestamp(int(value)).isoformat()
-        
+        calculation_type = entry['calculation'] #.capitalize()
+
+        value = entry['value']
+        value_str = value_to_str(value, entry)
+
+        key = entry['calculation'], entry['numerator'], entry['denominator']
+
+        # compare with world
+        world_value = world_data.get(key, {}).get('value')
+        world_value_formatted = value_to_str(world_value, entry)
+        world_sigma_str = ""
+        if entry["world_sigma"]:
+            world_sigma_str = ', ' + float_to_str(entry['world_sigma']) + ' sigma'
+        world_str = f' (globally {world_value_formatted}{world_sigma_str})' if world_value_formatted else ''
+
+        # compare with AoI
+        aoi_value = (aoi_data or {}).get(key, {}).get('value')
+        aoi_value_formatted = value_to_str(aoi_value, entry)
+        aoi_sigma_str = ""
+        if entry["aoi_sigma"]:
+            aoi_sigma_str = ', ' + float_to_str(entry['aoi_sigma']) + ' sigma'
+        aoi_str = f' (AOI {aoi_value_formatted}{aoi_sigma_str})' if aoi_value_formatted else ''
+
+        #quality = entry['quality']
+        #quality = (quality + world_data[key]["quality"])/2
         #quality_str = f"{abs(quality):.2f}"
-        
+
         sentence = (
-            f"{calculation_type} of {numerator_label}{denominator_label} is {value_str}{world_value}{sigma_str}"
+            f"{calculation_type} of {numerator_label}{denominator_label} is {value_str}{aoi_str}{world_str}"
             #f"with a quality metric of {quality_str}."
         )
         # example: mean of Air temperature (min) is 15.73 (globally 1.03) (15.73 sigma)

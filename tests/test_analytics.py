@@ -29,10 +29,11 @@ class TestAnalytics(unittest.TestCase):
             'quality': 0.7798245940871434,
             'numeratorUnit': 'ppl',
             'denominatorUnit': 'ppl',
-            'sigma': 4.3034507224487655,
+            'world_sigma': 4.3034507224487655,
+            'aoi_sigma': 0,
         }]
 
-        expected = 'mean of Population without a car over Population is 0.32 (globally 0.01) (4.30 sigma)'
+        expected = 'mean of Population without a car over Population is 0.32 (globally 0.01, 4.30 sigma)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
@@ -60,10 +61,11 @@ class TestAnalytics(unittest.TestCase):
             'quality': 0.0002680225867511481,
             'numeratorUnit': 'unixtime',
             'denominatorUnit': None,
-            'sigma': 1.0016197183988316,
+            'world_sigma': 1.0016197183988316,
+            'aoi_sigma': 0,
         }]
 
-        expected = 'mean of OSM last edit is 2024-04-25T09:02:54 (globally 2020-09-14T23:51:05) (1.00 sigma)'
+        expected = 'mean of OSM last edit is 2024-04-25T09:02:54 (globally 2020-09-14T23:51:05, 1.00 sigma)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
@@ -91,7 +93,8 @@ class TestAnalytics(unittest.TestCase):
             'quality': 0.41165680673194294,
             'numeratorUnit': 'USD',
             'denominatorUnit': 'ppl',
-            'sigma': 0,
+            'world_sigma': 0,
+            'aoi_sigma': 0,
         }]
 
         expected = 'max of Gross Domestic Product over Population is 71535.68 (globally 130509.66)'

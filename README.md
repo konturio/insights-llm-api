@@ -19,6 +19,7 @@ pip install -r requirements.txt
 Run server
 
 ```shell
+. env/bin/activate
 set -a; . <(grep -v '^#' .env | grep -v '^$' | sed -e "s/=/='/" -e "s/$/'/")
 python3 -m app.main
 ```

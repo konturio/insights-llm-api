@@ -13,6 +13,7 @@ class Settings:
 
     INSIGHTS_API_URL: str = None
     USER_PROFILE_API_URL: str = None
+    CLIENT_APP_UUID: str = None
 
     PGHOST: str = None
     PGPORT: int = 5432
