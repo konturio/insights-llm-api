@@ -25,10 +25,6 @@ async def get_db_conn():
     )
 
 
-def md5_to_uuid(s):
-    return '-'.join([s[:8], s[8:12], s[12:16], s[16:20], s[20:]])
-
-
 async def get_user_data(auth_token: str) -> dict:
     '''
     get user bio and reference area from UPS
@@ -81,7 +77,7 @@ async def llm_analytics(request: 'Request') -> 'Response':
 
     # build cache key from request and check if it's in llm_cache table
     llm_request = get_llm_prompt(sentences, bio, aoi_geojson)
-    cache_key = md5_to_uuid(hashlib.md5(llm_request.encode("utf-8")).hexdigest())
+    cache_key = hashlib.md5(llm_request.encode("utf-8")).hexdigest()
 
     openai_client = OpenAIClient()
     llm_model = await openai_client.model
