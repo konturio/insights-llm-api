@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import ujson as json
 from starlette.exceptions import HTTPException
@@ -151,28 +151,28 @@ def get_sorted_area_stats(
         v['world_sigma'] = calc_sigma(v, calculations_world, key)
         v['aoi_sigma'] = calc_sigma(v, calculations_aoi, key)
 
-    sort_by_sigma = 'aoi_sigma' if calculations_aoi else 'world_sigma'
     # Sort the list of calculations by the absolute value of the quality in ascending order
     return sorted(calculations_area.values(), key=lambda x: (
-        int(abs(x['quality'])), -x[sort_by_sigma], x['numerator'], x['value']
+        int(abs(x['quality'])),
+        *((-x['aoi_sigma'], -x['world_sigma']) if calculations_aoi else (-x['world_sigma'],)),
+        x['numerator'],
+        x['value']
     ))
 
 
-def float_to_str(x):
-    # Format the value to be more readable, especially handling scientific notation.
-    return f'{x:.2f}' if x > 1e-3 else f'{x:.2e}'
-
-
-def value_to_str(x: float, entry: dict):
+def value_to_str(x: float, entry: dict, sigma=False):
     if x is None:
         return ''
 
     if (entry['numeratorUnit'] == 'unixtime'
             and entry['denominatorLabel'] == '1'
             and x < 2000000000):
+        if sigma:
+            return str(timedelta(seconds=int(x)))
         return datetime.fromtimestamp(int(x)).isoformat()
 
-    return float_to_str(x)
+    # Format the value to be more readable, especially handling scientific notation.
+    return f'{x:.2f}' if x > 1e-3 else f'{x:.2e}'
 
 
 def to_readable_sentence(
@@ -208,7 +208,7 @@ def to_readable_sentence(
         world_value_formatted = value_to_str(world_value, entry)
         world_sigma_str = ""
         if entry["world_sigma"]:
-            world_sigma_str = ', ' + float_to_str(entry['world_sigma']) + ' sigma'
+            world_sigma_str = ', ' + value_to_str(entry['world_sigma'], entry, sigma=True) + ' sigma'
         world_str = f' (globally {world_value_formatted}{world_sigma_str})' if world_value_formatted else ''
 
         # compare with AoI
@@ -216,7 +216,7 @@ def to_readable_sentence(
         aoi_value_formatted = value_to_str(aoi_value, entry)
         aoi_sigma_str = ""
         if entry["aoi_sigma"]:
-            aoi_sigma_str = ', ' + float_to_str(entry['aoi_sigma']) + ' sigma'
+            aoi_sigma_str = ', ' + value_to_str(entry['aoi_sigma'], entry, sigma=True) + ' sigma'
         aoi_str = f' (AOI {aoi_value_formatted}{aoi_sigma_str})' if aoi_value_formatted else ''
 
         #quality = entry['quality']
@@ -228,7 +228,6 @@ def to_readable_sentence(
             #f"with a quality metric of {quality_str}."
         )
         # example: mean of Air temperature (min) is 15.73 (globally 1.03) (15.73 sigma)
-        # TODO: add AOI values if exists
         readable_sentences.append(sentence)
 
     return readable_sentences
