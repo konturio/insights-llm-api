@@ -101,6 +101,51 @@ class TestAnalytics(unittest.TestCase):
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
+    def test_aoi(self):
+        world_data = {
+            ('mean', 'pop_without_car', 'population'): {
+                 'numerator': 'pop_without_car',
+                 'denominator': 'population',
+                 'numeratorLabel': 'Population without a car',
+                 'denominatorLabel': 'Population',
+                 'calculation': 'mean',
+                 'value': 0.009002802597977946,
+                 'quality': 0.33564222905226,
+                 'numeratorUnit': 'ppl',
+                 'denominatorUnit': 'ppl',
+            }
+        }
+        aoi_data = {
+            ('mean', 'pop_without_car', 'population'): {
+                 'numerator': 'pop_without_car',
+                 'denominator': 'population',
+                 'numeratorLabel': 'Population without a car',
+                 'denominatorLabel': 'Population',
+                 'calculation': 'mean',
+                 'value': 0.2,
+                 'quality': 0.7,
+                 'numeratorUnit': 'ppl',
+                 'denominatorUnit': 'ppl',
+            }
+        }
+        selected_area_data = [{
+            'numerator': 'pop_without_car',
+            'denominator': 'population',
+            'numeratorLabel': 'Population without a car',
+            'denominatorLabel': 'Population',
+            'calculation': 'mean',
+            'value': 0.3175384925724989,
+            'quality': 0.7798245940871434,
+            'numeratorUnit': 'ppl',
+            'denominatorUnit': 'ppl',
+            'world_sigma': 4.3034507224487655,
+            'aoi_sigma': 2.1,
+        }]
+
+        expected = 'mean of Population without a car over Population is 0.32 (AOI 0.20, 2.10 sigma) (globally 0.01, 4.30 sigma)'
+        actual = to_readable_sentence(selected_area_data, world_data, aoi_data)[0]
+        self.assertEqual(expected, actual)
+
 
 if __name__ == '__main__':
     unittest.main()
