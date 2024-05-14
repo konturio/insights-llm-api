@@ -40,28 +40,28 @@ advanced_analytics_graphql = """
 """
 
 
-async def get_analytics_sentences(selected_area: dict, aoi: dict) -> list[str]:
+async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> list[str]:
     '''
-    accepts selected_area and aoi as geojson.
-    returns textual description of indicators stats for selected_area compared to world and AOI
+    accepts selected_area and reference_area as geojson.
+    returns textual description of indicators stats for selected_area compared to world and reference_area
     '''
     headers = {
         'User-Agent': settings.USER_AGENT,
     }
     async with ClientSession(headers=headers) as session:
         analytics_selected_area = await query_insights_api(session, advanced_analytics_graphql, selected_area)
-        analytics_aoi = {}
-        if aoi:
-            analytics_aoi = await query_insights_api(session, advanced_analytics_graphql, aoi)
+        analytics_reference_area = {}
+        if reference_area:
+            analytics_reference_area = await query_insights_api(session, advanced_analytics_graphql, reference_area)
         analytics_world = await query_insights_api(session, advanced_analytics_graphql)
         units = await query_insights_api(session, indicators_graphql)
 
     calculations_world = flatten_analytics(analytics_world, units)
     calculations_selected_area = flatten_analytics(analytics_selected_area, units)
-    calculations_aoi = flatten_analytics(analytics_aoi, units) if aoi else {}
-    sorted_calculations = get_sorted_area_stats(calculations_world, calculations_selected_area, calculations_aoi)
+    calculations_reference_area = flatten_analytics(analytics_reference_area, units) if reference_area else {}
+    sorted_calculations = get_sorted_area_stats(calculations_world, calculations_selected_area, calculations_reference_area)
 
-    return to_readable_sentence(sorted_calculations, calculations_world, calculations_aoi, units)
+    return to_readable_sentence(sorted_calculations, calculations_world, calculations_reference_area, units)
 
 
 async def query_insights_api(session: ClientSession, graphql: str, geojson=None) -> dict:
@@ -140,21 +140,21 @@ def calc_sigma(calculations: dict, ref: dict, key: tuple) -> float:
 
 def get_sorted_area_stats(
         calculations_world: dict[tuple, dict],
-        calculations_area: dict[tuple, dict],
-        calculations_aoi: dict[tuple, dict],
+        calculations_selected_area: dict[tuple, dict],
+        calculations_reference_area: dict[tuple, dict],
 ) -> list[dict]:
     '''
     add sigma to area analytics compared to the world mean metric
     and return a list [{calc_data}] sorted by quality, sigma, numerator & value
     '''
-    for key, v in calculations_area.items():
+    for key, v in calculations_selected_area.items():
         v['world_sigma'] = calc_sigma(v, calculations_world, key)
-        v['aoi_sigma'] = calc_sigma(v, calculations_aoi, key)
+        v['reference_area_sigma'] = calc_sigma(v, calculations_reference_area, key)
 
     # Sort the list of calculations by the absolute value of the quality in ascending order
-    return sorted(calculations_area.values(), key=lambda x: (
+    return sorted(calculations_selected_area.values(), key=lambda x: (
         int(abs(x['quality'])),
-        *((-x['aoi_sigma'], -x['world_sigma']) if calculations_aoi else (-x['world_sigma'],)),
+        *((-x['reference_area_sigma'], -x['world_sigma']) if calculations_reference_area else (-x['world_sigma'],)),
         x['numerator'],
         x['value']
     ))
@@ -178,12 +178,12 @@ def value_to_str(x: float, entry: dict, sigma=False):
 def to_readable_sentence(
         selected_area_data: list[dict],
         world_data: dict[tuple, dict],
-        aoi_data: dict[tuple, dict] = None,
+        reference_area_data: dict[tuple, dict] = None,
         units: dict = None,
 ) -> list[str]:
     '''
     compose a list of readable sentences that describe analytics
-    for selected_area, world and aoi (Area Of Interest)
+    for selected_area, world and reference_area (Area Of Interest)
     '''
     readable_sentences = []
 
@@ -211,20 +211,20 @@ def to_readable_sentence(
             world_sigma_str = ', ' + value_to_str(entry['world_sigma'], entry, sigma=True) + ' sigma'
         world_str = f' (globally {world_value_formatted}{world_sigma_str})' if world_value_formatted else ''
 
-        # compare with AoI
-        aoi_value = (aoi_data or {}).get(key, {}).get('value')
-        aoi_value_formatted = value_to_str(aoi_value, entry)
-        aoi_sigma_str = ""
-        if entry["aoi_sigma"]:
-            aoi_sigma_str = ', ' + value_to_str(entry['aoi_sigma'], entry, sigma=True) + ' sigma'
-        aoi_str = f' (AOI {aoi_value_formatted}{aoi_sigma_str})' if aoi_value_formatted else ''
+        # compare with reference_area
+        reference_area_value = (reference_area_data or {}).get(key, {}).get('value')
+        reference_area_value_formatted = value_to_str(reference_area_value, entry)
+        reference_area_sigma_str = ""
+        if entry["reference_area_sigma"]:
+            reference_area_sigma_str = ', ' + value_to_str(entry['reference_area_sigma'], entry, sigma=True) + ' sigma'
+        reference_area_str = f' (reference_area {reference_area_value_formatted}{reference_area_sigma_str})' if reference_area_value_formatted else ''
 
         #quality = entry['quality']
         #quality = (quality + world_data[key]["quality"])/2
         #quality_str = f"{abs(quality):.2f}"
 
         sentence = (
-            f"{calculation_type} of {numerator_label}{denominator_label} is {value_str}{aoi_str}{world_str}"
+            f"{calculation_type} of {numerator_label}{denominator_label} is {value_str}{reference_area_str}{world_str}"
             #f"with a quality metric of {quality_str}."
         )
         # example: mean of Air temperature (min) is 15.73 (globally 1.03) (15.73 sigma)

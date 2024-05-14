@@ -65,18 +65,18 @@ async def llm_analytics(request: 'Request') -> 'Response':
     user_data = await get_user_data(auth_token=request.headers.get('Authorization') or '')
     bio = user_data.get('bio')
     reference_area = user_data.get('reference_area') or {}
-    aoi_geojson = reference_area.get('referenceAreaGeometry')
+    reference_area_geojson = reference_area.get('referenceAreaGeometry')
     LOGGER.debug('got user data')
     LOGGER.debug('user bio: %s', bio)
 
     # parse input params of original query
     data = await request.json()
     LOGGER.debug(f'asking insights-api {settings.INSIGHTS_API_URL} for advanced analytics..')
-    sentences = await get_analytics_sentences(selected_area=data.get("area"), aoi=aoi_geojson)
+    sentences = await get_analytics_sentences(selected_area=data.get("area"), reference_area=reference_area_geojson)
     LOGGER.debug('got advanced analytics')
 
     # build cache key from request and check if it's in llm_cache table
-    llm_request = get_llm_prompt(sentences, bio, aoi_geojson)
+    llm_request = get_llm_prompt(sentences, bio, reference_area_geojson)
     cache_key = hashlib.md5(llm_request.encode("utf-8")).hexdigest()
 
     openai_client = OpenAIClient()

@@ -30,7 +30,7 @@ class TestAnalytics(unittest.TestCase):
             'numeratorUnit': 'ppl',
             'denominatorUnit': 'ppl',
             'world_sigma': 4.3034507224487655,
-            'aoi_sigma': 0,
+            'reference_area_sigma': 0,
         }]
 
         expected = 'mean of Population without a car over Population is 0.32 (globally 0.01, 4.30 sigma)'
@@ -62,7 +62,7 @@ class TestAnalytics(unittest.TestCase):
             'numeratorUnit': 'unixtime',
             'denominatorUnit': None,
             'world_sigma': 61431.0016197183988316,
-            'aoi_sigma': 0,
+            'reference_area_sigma': 0,
         }]
 
         expected = 'mean of OSM last edit is 2024-04-25T09:02:54 (globally 2020-09-14T23:51:05, 17:03:51 sigma)'
@@ -94,14 +94,14 @@ class TestAnalytics(unittest.TestCase):
             'numeratorUnit': 'USD',
             'denominatorUnit': 'ppl',
             'world_sigma': 0,
-            'aoi_sigma': 0,
+            'reference_area_sigma': 0,
         }]
 
         expected = 'max of Gross Domestic Product over Population is 71535.68 (globally 130509.66)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
-    def test_aoi(self):
+    def test_reference_area(self):
         world_data = {
             ('mean', 'pop_without_car', 'population'): {
                  'numerator': 'pop_without_car',
@@ -115,7 +115,7 @@ class TestAnalytics(unittest.TestCase):
                  'denominatorUnit': 'ppl',
             }
         }
-        aoi_data = {
+        reference_area_data = {
             ('mean', 'pop_without_car', 'population'): {
                  'numerator': 'pop_without_car',
                  'denominator': 'population',
@@ -139,11 +139,11 @@ class TestAnalytics(unittest.TestCase):
             'numeratorUnit': 'ppl',
             'denominatorUnit': 'ppl',
             'world_sigma': 4.3034507224487655,
-            'aoi_sigma': 2.1,
+            'reference_area_sigma': 2.1,
         }]
 
-        expected = 'mean of Population without a car over Population is 0.32 (AOI 0.20, 2.10 sigma) (globally 0.01, 4.30 sigma)'
-        actual = to_readable_sentence(selected_area_data, world_data, aoi_data)[0]
+        expected = 'mean of Population without a car over Population is 0.32 (reference_area 0.20, 2.10 sigma) (globally 0.01, 4.30 sigma)'
+        actual = to_readable_sentence(selected_area_data, world_data, reference_area_data)[0]
         self.assertEqual(expected, actual)
 
 
