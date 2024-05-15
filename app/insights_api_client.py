@@ -158,7 +158,8 @@ def get_sorted_area_stats(
     # Sort the list of calculations by the absolute value of the quality in ascending order
     return sorted(calculations_selected_area.values(), key=lambda x: (
         int(abs(x['quality'])),
-        *((-x['reference_area_sigma'], -x['world_sigma']) if calculations_reference_area else (-x['world_sigma'],)),
+        -x['reference_area_sigma'],  # <- will be the same for all rows if reference_area is None
+        -x['world_sigma'],
         x['numerator'],
         x['value']
     ))
