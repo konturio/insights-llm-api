@@ -61,11 +61,43 @@ class TestAnalytics(unittest.TestCase):
             'quality': 0.0002680225867511481,
             'numeratorUnit': 'unixtime',
             'denominatorUnit': None,
-            'world_sigma': 61431.0016197183988316,
+            'world_sigma': 1.0016197183988316,
             'reference_area_sigma': 0,
         }]
 
-        expected = 'mean of OSM last edit is 2024-04-25T09:02:54 (globally 2020-09-14T23:51:05, 17:03:51 sigma)'
+        expected = 'mean of OSM last edit is 2024-04-25T09:02:54 (globally 2020-09-14T23:51:05, 1.00 sigma)'
+        actual = to_readable_sentence(selected_area_data, world_data)[0]
+        self.assertEqual(expected, actual)
+
+    def test_unixtime_stddev(self):
+        world_data = {
+            ('stddev', 'max_ts', 'one'): {
+                'numerator': 'max_ts',
+                'denominator': 'one',
+                'numeratorLabel': 'OSM last edit',
+                'denominatorLabel': '1',
+                'calculation': 'mean',
+                'value': 113065.1491652,
+                'quality': 0.02838493267083375,
+                'numeratorUnit': 'unixtime',
+                'denominatorUnit': None
+            }
+        }
+        selected_area_data = [{
+            'numerator': 'max_ts',
+            'denominator': 'one',
+            'numeratorLabel': 'OSM last edit',
+            'denominatorLabel': '1',
+            'calculation': 'stddev',
+            'value': 21374.125,
+            'quality': 0.0002680225867511481,
+            'numeratorUnit': 'unixtime',
+            'denominatorUnit': None,
+            'world_sigma': 0,
+            'reference_area_sigma': 0,
+        }]
+
+        expected = 'stddev of OSM last edit is 5:56:14 (globally 1 day, 7:24:25)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 

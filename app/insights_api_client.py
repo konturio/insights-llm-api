@@ -126,7 +126,11 @@ def flatten_analytics(data: dict, units: dict) -> dict[tuple, dict]:
 
 def calc_sigma(calculations: dict, ref: dict, key: tuple) -> float:
     '''
-    return sigma only for 'mean' calculation
+    Calculate the sigma value for the 'mean' calculation type.
+
+    Sigma is computed as the absolute difference between the mean values from
+    two different polygons, divided by the standard deviation. This results in
+    a dimensionless value that can be used for sorting different types of measurements
     '''
     stddev_key = 'stddev', *key[1:]
     if key[0] != 'mean' or key not in ref or stddev_key not in ref:
@@ -164,10 +168,11 @@ def value_to_str(x: float, entry: dict, sigma=False):
     if x is None:
         return ''
 
-    if (entry['numeratorUnit'] == 'unixtime'
+    if (not sigma
+            and entry['numeratorUnit'] == 'unixtime'
             and entry['denominatorLabel'] == '1'
             and x < 2000000000):
-        if sigma:
+        if entry['calculation'] == 'stddev':
             return str(timedelta(seconds=int(x)))
         return datetime.fromtimestamp(int(x)).isoformat()
 
