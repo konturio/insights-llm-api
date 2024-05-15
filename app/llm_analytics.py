@@ -78,7 +78,9 @@ async def llm_analytics(request: 'Request') -> 'Response':
 
     # build cache key from request and check if it's in llm_cache table
     llm_request = get_llm_prompt(sentences, bio, selected_area_geojson, reference_area_geojson)
-    cache_key = hashlib.md5(llm_request.encode("utf-8")).hexdigest()
+    llm_instructions = settings.OPENAI_INSTRUCTIONS
+    to_cache = f'instructions: {llm_instructions}; prompt: {llm_request}'
+    cache_key = hashlib.md5(to_cache.encode("utf-8")).hexdigest()
 
     openai_client = OpenAIClient()
     llm_model = await openai_client.model
@@ -100,7 +102,7 @@ async def llm_analytics(request: 'Request') -> 'Response':
     llm_response = await openai_client.get_llm_commentary(llm_request)
     await conn.execute(
         'insert into llm_cache (hash, request, response, model_name) values ($1, $2, $3, $4)',
-        cache_key, llm_request, llm_response, llm_model,
+        cache_key, to_cache, llm_response, llm_model,
     )
     await conn.close()
     LOGGER.debug('saved LLM response')
