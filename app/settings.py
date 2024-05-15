@@ -13,6 +13,7 @@ class Settings:
 
     INSIGHTS_API_URL: str = None
     USER_PROFILE_API_URL: str = None
+    CLIENT_APP_UUID: str = None
 
     PGHOST: str = None
     PGPORT: int = 5432
@@ -20,7 +21,6 @@ class Settings:
     PGUSER: str = None
 
     USER_AGENT: str = 'insights-llm-api'
-    LLM_MODEL_NAME: str = None
     OPENAI_INSTRUCTIONS: str = None
     OPENAI_CONTEXT_LENGTH: int = 32000
     OPENAI_ASSISTANT: str = None

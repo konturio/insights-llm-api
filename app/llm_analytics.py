@@ -9,7 +9,7 @@ from .secret import Secret
 from .settings import Settings
 from .logger import LOGGER
 from .insights_api_client import get_analytics_sentences
-from .openai_client import get_llm_commentary, get_llm_prompt
+from .openai_client import get_llm_prompt, OpenAIClient
 
 settings = Settings()
 secret = Secret()
@@ -25,21 +25,30 @@ async def get_db_conn():
     )
 
 
-def md5_to_uuid(s):
-    return '-'.join([s[:8], s[8:12], s[12:16], s[16:20], s[20:]])
-
-
 async def get_user_data(auth_token: str) -> dict:
-    url = settings.USER_PROFILE_API_URL + '/users/current_user'
+    '''
+    get user bio and reference area from UPS
+    '''
     headers = {
         'Authorization': auth_token,
         'User-Agent': settings.USER_AGENT,
     }
     async with ClientSession(headers=headers) as session:
+        url = settings.USER_PROFILE_API_URL + '/users/current_user'
         async with session.get(url) as resp:
             if resp.status != 200:
                 raise HTTPException(status_code=resp.status)
-            return await resp.json()
+            user_data = await resp.json()
+
+        url = settings.USER_PROFILE_API_URL + '/apps/' + settings.CLIENT_APP_UUID
+        async with session.get(url) as resp:
+            if resp.status != 200:
+                raise HTTPException(status_code=resp.status)
+            app_config = await resp.json()
+
+    reference_area = app_config['featuresConfig'].get('reference_area')
+    user_data['reference_area'] = reference_area
+    return user_data
 
 
 async def llm_analytics(request: 'Request') -> 'Response':
@@ -54,31 +63,46 @@ async def llm_analytics(request: 'Request') -> 'Response':
     '''
     LOGGER.debug(f'asking UPS {settings.USER_PROFILE_API_URL} for user data..')
     user_data = await get_user_data(auth_token=request.headers.get('Authorization') or '')
-    LOGGER.debug('got user data')
     bio = user_data.get('bio')
+    reference_area = user_data.get('reference_area') or {}
+    reference_area_geojson = reference_area.get('referenceAreaGeometry')
+    LOGGER.debug('got user data')
+    LOGGER.debug('user bio: %s', bio)
 
+    # parse input params of original query
     data = await request.json()
+    selected_area_geojson = data.get("area")
     LOGGER.debug(f'asking insights-api {settings.INSIGHTS_API_URL} for advanced analytics..')
-    sentences = await get_analytics_sentences(selected_area=data.get("area"), aoi=None)
+    sentences = await get_analytics_sentences(selected_area_geojson, reference_area_geojson)
     LOGGER.debug('got advanced analytics')
 
     # build cache key from request and check if it's in llm_cache table
-    llm_request = get_llm_prompt(sentences, bio)
-    cache_key = md5_to_uuid(hashlib.md5(llm_request.encode("utf-8")).hexdigest())
+    llm_request = get_llm_prompt(sentences, bio, selected_area_geojson, reference_area_geojson)
+    llm_instructions = settings.OPENAI_INSTRUCTIONS
+    to_cache = f'instructions: {llm_instructions}; prompt: {llm_request}'
+    cache_key = hashlib.md5(to_cache.encode("utf-8")).hexdigest()
+
+    openai_client = OpenAIClient()
+    llm_model = await openai_client.model
 
     conn = await get_db_conn()
     if result := await conn.fetchval(
             'select response from llm_cache where hash = $1 and model_name = $2',
-            cache_key, settings.LLM_MODEL_NAME):
+            cache_key, llm_model):
         await conn.close()
-        LOGGER.debug('found LLM response in the cache')
+        LOGGER.debug('found LLM response for %s model in the cache', llm_model)
         return JSONResponse({'data': result})
 
+    LOGGER.debug('\n'.join(llm_request.split(';')))
     LOGGER.debug('asking LLM for commentary..')
-    llm_response = await get_llm_commentary(llm_request)
+
+    # uncomment to debug only prompt, without querying LLM:
+    #return JSONResponse({'data': {}})
+
+    llm_response = await openai_client.get_llm_commentary(llm_request)
     await conn.execute(
         'insert into llm_cache (hash, request, response, model_name) values ($1, $2, $3, $4)',
-        cache_key, llm_request, llm_response, settings.LLM_MODEL_NAME,
+        cache_key, to_cache, llm_response, llm_model,
     )
     await conn.close()
     LOGGER.debug('saved LLM response')

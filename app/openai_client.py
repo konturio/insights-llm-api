@@ -12,9 +12,99 @@ secret = Secret()
 settings = Settings()
 
 
-def get_llm_prompt(sentences: list[str], bio: str) -> str:
-    # TODO: retrieve a name from selected_area['features'][0]['properties']
-    prompt_start = 'Here is the description of the user\'s selected area compared to the world for the reference:'
+class OpenAIClient:
+
+    def __init__(self):
+        self.client = AsyncOpenAI(api_key=secret.OPENAI_API_KEY, timeout=40.0)
+        self._assistant = None
+        self._model = None
+
+    @property
+    async def assistant(self):
+        if self._assistant:
+            return self._assistant
+
+        LOGGER.debug('looking for %s assistant..', settings.OPENAI_ASSISTANT)
+        self._assistant = [i async for i in self.client.beta.assistants.list() if i.name == settings.OPENAI_ASSISTANT][0]
+        LOGGER.debug('chatGPT model: %s', self._assistant.model)
+        return self._assistant
+
+    @property
+    async def model(self):
+        assistant = await self.assistant
+        return assistant.model
+
+    async def get_llm_commentary(self, prompt: str) -> str:
+        '''
+        returns chatGPT response for provided prompt
+        '''
+        thread = await self.client.beta.threads.create()
+        current_chunk = ''
+        for line in prompt.split('\n'):
+            if len(current_chunk) > 20000:
+                message = await self.client.beta.threads.messages.create(
+                    thread_id=thread.id,
+                    role="user",
+                    content=current_chunk
+                )
+                current_chunk = ''
+            current_chunk += line + '\n'
+        if current_chunk:
+            message = await self.client.beta.threads.messages.create(
+                thread_id=thread.id,
+                role="user",
+                content=current_chunk
+            )
+
+        # assistant has it's own instructions, but we're able to override them per-run
+        assistant = await self.assistant
+        LOGGER.debug('chatGPT instructions: %s', settings.OPENAI_INSTRUCTIONS)
+        run = await self.client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=assistant.id,
+            instructions=settings.OPENAI_INSTRUCTIONS,
+        )
+
+        while not run.status == "completed":
+            await asyncio.sleep(1)
+            run = await self.client.beta.threads.runs.retrieve(
+                thread_id=thread.id,
+                run_id=run.id
+            )
+            LOGGER.debug("openAI thread status: %s", run.status)
+            if run.status == "failed":
+                raise HTTPException(status_code=400, detail='failed to get OpenAI response')
+
+        messages = await self.client.beta.threads.messages.list(
+          thread_id=thread.id
+        )
+
+        message_text = ""
+        for _, message in messages:
+            message_text = message[0].content[0].text.value
+            break
+
+        return message_text
+
+
+def get_llm_prompt(sentences: list[str], bio: str, selected_area_geojson: dict, reference_area_geojson: dict) -> str:
+    try:
+        reference_area_name = reference_area_geojson['properties']['tags']['name:en']
+        reference_area_name = f'({reference_area_name})'
+    except KeyError:
+        reference_area_name = ''
+    try:
+        selected_area_name = selected_area_geojson['properties']['tags']['name:en']
+        selected_area_name = f'({selected_area_name})'
+    except KeyError:
+        selected_area_name = ''
+    LOGGER.debug('reference_area geom is %s, reference_area name is %s', 'not empty' if reference_area_geojson else 'empty', reference_area_name)
+    LOGGER.debug('selected_area geom is %s, selected_area name is %s', 'not empty' if selected_area_geojson else 'empty', selected_area_name)
+    prompt_start = f'Here is the description of the user\'s selected area {selected_area_name} compared to '
+    if reference_area_geojson:
+        prompt_start += f'user\'s area of interest {reference_area_name} and the world for the reference:'
+    else:
+        prompt_start += 'the world for the reference:'
     prompt_end = f'What the user wrote about themselves: "{bio}" '
 
     # decide how many sentences we can send respecting max context length
@@ -29,53 +119,3 @@ def get_llm_prompt(sentences: list[str], bio: str) -> str:
     analytics_txt = ';\n'.join(sentences[:num_sentences])
 
     return re.sub(r'\s+', ' ', f'{prompt_start} {analytics_txt} {prompt_end}')
-
-
-async def get_llm_commentary(prompt: str) -> str:
-    client = AsyncOpenAI(api_key=secret.OPENAI_API_KEY, timeout=40.0)
-    LOGGER.debug('looking for %s assistant..', settings.OPENAI_ASSISTANT)
-    assistant = [i async for i in client.beta.assistants.list() if i.name == settings.OPENAI_ASSISTANT][0]
-    LOGGER.debug('chatGPT instructions: %s', settings.OPENAI_INSTRUCTIONS)
-    thread = await client.beta.threads.create()
-    current_chunk = ''
-    for line in prompt.split('\n'):            
-        if len(current_chunk) > 20000:                
-            message = await client.beta.threads.messages.create(
-                thread_id=thread.id,
-                role="user",
-                content=current_chunk
-            )
-            current_chunk = ''
-        current_chunk += line + '\n'
-    if current_chunk:
-        message = await client.beta.threads.messages.create(
-            thread_id=thread.id,
-            role="user",
-            content=current_chunk
-        )
-    run = await client.beta.threads.runs.create(
-        thread_id=thread.id,
-        assistant_id=assistant.id,
-        instructions=settings.OPENAI_INSTRUCTIONS,
-    )
-
-    while not run.status == "completed":
-        await asyncio.sleep(1)
-        run = await client.beta.threads.runs.retrieve(
-            thread_id=thread.id,
-            run_id=run.id
-        )
-        LOGGER.debug("openAI thread status: %s", run.status)
-        if run.status == "failed":
-            raise HTTPException(status_code=400, detail='failed to get OpenAI response')
-        
-    messages = await client.beta.threads.messages.list(
-      thread_id=thread.id
-    )
-
-    message_text = ""
-    for _, message in messages:
-        message_text = message[0].content[0].text.value
-        break
-
-    return message_text
