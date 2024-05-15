@@ -71,12 +71,13 @@ async def llm_analytics(request: 'Request') -> 'Response':
 
     # parse input params of original query
     data = await request.json()
+    selected_area_geojson = data.get("area")
     LOGGER.debug(f'asking insights-api {settings.INSIGHTS_API_URL} for advanced analytics..')
-    sentences = await get_analytics_sentences(selected_area=data.get("area"), reference_area=reference_area_geojson)
+    sentences = await get_analytics_sentences(selected_area_geojson, reference_area_geojson)
     LOGGER.debug('got advanced analytics')
 
     # build cache key from request and check if it's in llm_cache table
-    llm_request = get_llm_prompt(sentences, bio, reference_area_geojson)
+    llm_request = get_llm_prompt(sentences, bio, selected_area_geojson, reference_area_geojson)
     cache_key = hashlib.md5(llm_request.encode("utf-8")).hexdigest()
 
     openai_client = OpenAIClient()
@@ -92,6 +93,8 @@ async def llm_analytics(request: 'Request') -> 'Response':
 
     LOGGER.debug('\n'.join(llm_request.split(';')))
     LOGGER.debug('asking LLM for commentary..')
+
+    # uncomment to debug only prompt, without querying LLM:
     #return JSONResponse({'data': {}})
 
     llm_response = await openai_client.get_llm_commentary(llm_request)

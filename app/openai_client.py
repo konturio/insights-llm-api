@@ -87,14 +87,20 @@ class OpenAIClient:
         return message_text
 
 
-def get_llm_prompt(sentences: list[str], bio: str, reference_area_geojson: dict) -> str:
+def get_llm_prompt(sentences: list[str], bio: str, selected_area_geojson: dict, reference_area_geojson: dict) -> str:
     try:
-        reference_area_name = reference_area_geojson['properties']['tags']['official_name:en']
+        reference_area_name = reference_area_geojson['properties']['tags']['name:en']
         reference_area_name = f'({reference_area_name})'
     except KeyError:
         reference_area_name = ''
+    try:
+        selected_area_name = selected_area_geojson['properties']['tags']['name:en']
+        selected_area_name = f'({selected_area_name})'
+    except KeyError:
+        selected_area_name = ''
     LOGGER.debug('reference_area geom is %s, reference_area name is %s', 'not empty' if reference_area_geojson else 'empty', reference_area_name)
-    prompt_start = 'Here is the description of the user\'s selected area compared to '
+    LOGGER.debug('selected_area geom is %s, selected_area name is %s', 'not empty' if selected_area_geojson else 'empty', selected_area_name)
+    prompt_start = f'Here is the description of the user\'s selected area {selected_area_name} compared to '
     if reference_area_geojson:
         prompt_start += f'user\'s area of interest {reference_area_name} and the world for the reference:'
     else:
