@@ -25,7 +25,7 @@ async def get_db_conn():
     )
 
 
-async def get_user_data(auth_token: str) -> dict:
+async def get_user_data(app_id: str, auth_token: str) -> dict:
     '''
     get user bio and reference area from UPS
     '''
@@ -40,7 +40,7 @@ async def get_user_data(auth_token: str) -> dict:
                 raise HTTPException(status_code=resp.status)
             user_data = await resp.json()
 
-        url = settings.USER_PROFILE_API_URL + '/apps/' + settings.CLIENT_APP_UUID
+        url = settings.USER_PROFILE_API_URL + '/apps/' + app_id
         async with session.get(url) as resp:
             if resp.status != 200:
                 raise HTTPException(status_code=resp.status)
@@ -56,22 +56,25 @@ async def llm_analytics(request: 'Request') -> 'Response':
     Handles POST requests to /llm-analytics.
 
     Request format:
+        - 'app_id' (str): UUID of client application
         - 'area' (dict): A GeoJSON representing the selected area.
 
     Response format:
         - 'data' (str): analytics for selected area in markdown format
     '''
+    # parse input params of original query
+    data = await request.json()
+    app_id = data.get("app_id")
+    selected_area_geojson = data.get("area")
+
     LOGGER.debug(f'asking UPS {settings.USER_PROFILE_API_URL} for user data..')
-    user_data = await get_user_data(auth_token=request.headers.get('Authorization') or '')
+    user_data = await get_user_data(app_id, auth_token=request.headers.get('Authorization') or '')
     bio = user_data.get('bio')
     reference_area = user_data.get('reference_area') or {}
-    reference_area_geojson = reference_area.get('referenceAreaGeometry')
+    reference_area_geojson = reference_area.get('referenceAreaGeometry') or {}
     LOGGER.debug('got user data')
     LOGGER.debug('user bio: %s', bio)
 
-    # parse input params of original query
-    data = await request.json()
-    selected_area_geojson = data.get("area")
     LOGGER.debug(f'asking insights-api {settings.INSIGHTS_API_URL} for advanced analytics..')
     sentences = await get_analytics_sentences(selected_area_geojson, reference_area_geojson)
     LOGGER.debug('got advanced analytics')
