@@ -60,7 +60,8 @@ curl http://localhost:8000/llm-analytics \
   -H 'Authorization: Bearer your_long_auth_token' \
   -H 'Content-Type: application/json' \
   -d '{
-    "area": {
+    "appId": "9043acf9-2cf3-48ac-9656-a5d7c4b7593d",
+    "features": {
       "type": "Feature",
       "geometry": {
         "type": "Polygon",
@@ -88,7 +89,8 @@ curl http://localhost:8000/llm-analytics \
     -H 'Authorization: Bearer your_long_auth_token' \
   -H 'Content-Type: application/json' \
   -d '{
-    "area": {
+    "appId": "9043acf9-2cf3-48ac-9656-a5d7c4b7593d",
+    "features": {
       "type": "FeatureCollection",
       "features": [
         {
