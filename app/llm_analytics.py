@@ -75,7 +75,7 @@ async def llm_analytics(request: 'Request') -> 'Response':
     app_id = data.get("appId")
     if not app_id:
         raise HTTPException(status_code=400, detail='missing appId')
-    selected_area_geojson = data.get("features")
+    selected_area_geojson = data.get("features") or {}
 
     LOGGER.debug(f'asking UPS {settings.USER_PROFILE_API_URL} for user data..')
     user_data = await get_user_data(app_id, auth_token=request.headers.get('Authorization') or '')
