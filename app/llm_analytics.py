@@ -21,7 +21,7 @@ async def get_db_conn():
         port=settings.PGPORT,
         database=settings.PGDATABASE,
         user=settings.PGUSER,
-        password=secret.PGPASSWORD
+        password=str(secret.PGPASSWORD)
     )
 
 
