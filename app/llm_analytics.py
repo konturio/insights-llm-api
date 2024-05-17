@@ -52,7 +52,7 @@ async def get_user_data(app_id: str, auth_token: str) -> dict:
                 raise HTTPException(status_code=resp.status, detail=await resp.text())
             features = await resp.json()
             if len([x for x in features if x['name'] == 'llm_analytics']) == 0:
-                raise HTTPException(status_code=403, detail='llm_analytics not enabled for user')
+                raise HTTPException(status_code=403, detail='llm_analytics is not enabled for the user')
 
     reference_area = app_config['featuresConfig'].get('reference_area')
     user_data['reference_area'] = reference_area
