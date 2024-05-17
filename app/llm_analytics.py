@@ -37,14 +37,22 @@ async def get_user_data(app_id: str, auth_token: str) -> dict:
         url = settings.USER_PROFILE_API_URL + '/users/current_user'
         async with session.get(url) as resp:
             if resp.status != 200:
-                raise HTTPException(status_code=resp.status)
+                raise HTTPException(status_code=resp.status, detail=await resp.text())
             user_data = await resp.json()
 
         url = settings.USER_PROFILE_API_URL + '/apps/' + app_id
         async with session.get(url) as resp:
             if resp.status != 200:
-                raise HTTPException(status_code=resp.status)
+                raise HTTPException(status_code=resp.status, detail=await resp.text())
             app_config = await resp.json()
+
+        url = settings.USER_PROFILE_API_URL + '/features?appId=' + app_id
+        async with session.get(url) as resp:
+            if resp.status != 200:
+                raise HTTPException(status_code=resp.status, detail=await resp.text())
+            features = await resp.json()
+            if len([x for x in features if x['name'] == 'llm_analytics']) == 0:
+                raise HTTPException(status_code=403, detail='llm_analytics is not enabled for the user')
 
     reference_area = app_config['featuresConfig'].get('reference_area')
     user_data['reference_area'] = reference_area
@@ -56,16 +64,18 @@ async def llm_analytics(request: 'Request') -> 'Response':
     Handles POST requests to /llm-analytics.
 
     Request format:
-        - 'app_id' (str): UUID of client application
-        - 'area' (dict): A GeoJSON representing the selected area.
+        - 'appId' (str): UUID of client application
+        - 'features' (dict): A GeoJSON representing the selected area.
 
     Response format:
         - 'data' (str): analytics for selected area in markdown format
     '''
     # parse input params of original query
     data = await request.json()
-    app_id = data.get("app_id")
-    selected_area_geojson = data.get("area")
+    app_id = data.get("appId")
+    if not app_id:
+        raise HTTPException(status_code=400, detail='missing appId')
+    selected_area_geojson = data.get("features")
 
     LOGGER.debug(f'asking UPS {settings.USER_PROFILE_API_URL} for user data..')
     user_data = await get_user_data(app_id, auth_token=request.headers.get('Authorization') or '')
