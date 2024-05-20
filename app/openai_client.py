@@ -87,7 +87,7 @@ class OpenAIClient:
         return message_text
 
 
-def get_llm_prompt(sentences: list[str], bio: str, selected_area_geojson: dict, reference_area_geojson: dict) -> str:
+def get_llm_prompt(sentences: list[str], bio: str, lang: str, selected_area_geojson: dict, reference_area_geojson: dict) -> str:
     try:
         reference_area_name = reference_area_geojson['properties']['tags']['name:en']
         reference_area_name = f'({reference_area_name})'
@@ -102,10 +102,14 @@ def get_llm_prompt(sentences: list[str], bio: str, selected_area_geojson: dict, 
     LOGGER.debug('selected_area geom is %s, selected_area name is %s', 'not empty' if selected_area_geojson else 'empty', selected_area_name)
     prompt_start = f'Here is the description of the user\'s selected area {selected_area_name} compared to '
     if reference_area_geojson:
-        prompt_start += f'user\'s area of interest {reference_area_name} and the world for the reference:'
+        prompt_start += f'user\'s reference area {reference_area_name} and the world:'
     else:
         prompt_start += 'the world for the reference:'
-    prompt_end = f'What the user wrote about themselves: "{bio}" '
+    prompt_end = f'User wrote in their bio: "{bio}" '
+    if lang:
+        prompt_end += f'''
+            User have selected a language: {lang}. Answer in that language.
+        '''
 
     # decide how many sentences we can send respecting max context length
     limit = settings.OPENAI_CONTEXT_LENGTH - len(prompt_start) - len(prompt_end)
