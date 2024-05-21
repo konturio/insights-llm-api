@@ -90,8 +90,6 @@ def flatten_analytics(data: dict, units: dict) -> dict[tuple, dict]:
         x['name']: x['unit']['id']
         for x in units['data']['polygonStatistic']['bivariateStatistic']['indicators']
     }
-    # possible units are:
-    # nW_cm2_sr None celc_deg km2 m days fract ppl deg m_s2 W_m2 h USD other n km unixtime index
 
     calculations_world = {}
     for item in data['data']['polygonStatistic']['analytics']['advancedAnalytics']:
@@ -165,6 +163,23 @@ def get_sorted_area_stats(
     ))
 
 
+def unit_to_str(entry: dict, sigma=False):
+    # possible units are:
+    # nW_cm2_sr None celc_deg km2 m days fract ppl deg m_s2 W_m2 h USD other n km unixtime index
+
+    if (sigma or entry['denominatorUnit'] == entry['numeratorUnit'] or
+            entry['numeratorUnit'] in ('other', 'index', None, 'fract') or
+            (entry['numeratorUnit'] == 'n' and entry['denominatorUnit'] == '1')):
+        return ''
+
+    s = entry['numeratorUnit'] or ''
+    if entry['denominatorUnit'] and entry['denominatorUnit'] != '1':
+        s += '/' + entry['denominatorUnit']
+    if s:
+        s = ' ' + s
+    return s
+
+
 def value_to_str(x: float, entry: dict, sigma=False):
     if x is None:
         return ''
@@ -177,8 +192,9 @@ def value_to_str(x: float, entry: dict, sigma=False):
             return str(timedelta(seconds=int(x)))
         return datetime.fromtimestamp(int(x)).isoformat()
 
+    unit_str = unit_to_str(entry, sigma)
     # Format the value to be more readable, especially handling scientific notation.
-    return f'{x:.2f}' if x > 1e-3 else f'{x:.2e}'
+    return (f'{x:.2f}' if x > 1e-3 else f'{x:.2e}') + unit_str
 
 
 def to_readable_sentence(
@@ -189,15 +205,13 @@ def to_readable_sentence(
 ) -> list[str]:
     '''
     compose a list of readable sentences that describe analytics
-    for selected_area, world and reference_area (Area Of Interest)
+    for selected_area, world and reference_area
     '''
     readable_sentences = []
 
     for entry in selected_area_data:
         numerator_label = entry['numeratorLabel']
 
-        if entry['denominatorLabel'] == "Area":
-            entry['denominatorLabel'] = "area km2"
         denominator_label = " over " + entry['denominatorLabel']
         if entry['denominatorLabel'] == "1":
             denominator_label = ""

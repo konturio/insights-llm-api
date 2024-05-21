@@ -1,6 +1,6 @@
 import unittest
 
-from app.insights_api_client import to_readable_sentence
+from app.insights_api_client import to_readable_sentence, unit_to_str
 
 
 class TestAnalytics(unittest.TestCase):
@@ -129,7 +129,7 @@ class TestAnalytics(unittest.TestCase):
             'reference_area_sigma': 0,
         }]
 
-        expected = 'max of Gross Domestic Product over Population is 71535.68 (globally 130509.66)'
+        expected = 'max of Gross Domestic Product over Population is 71535.68 USD/ppl (globally 130509.66 USD/ppl)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
@@ -177,6 +177,42 @@ class TestAnalytics(unittest.TestCase):
         expected = 'mean of Population without a car over Population is 0.32 (reference_area 0.20, 2.10 sigma) (globally 0.01, 4.30 sigma)'
         actual = to_readable_sentence(selected_area_data, world_data, reference_area_data)[0]
         self.assertEqual(expected, actual)
+
+    def test_unit_to_str(self):
+        # Population without a car over Population
+        entry = {
+            'numeratorUnit': 'ppl',
+            'denominatorUnit': 'ppl',
+        }
+        s = unit_to_str(entry)
+        self.assertEqual(s, '')
+
+        # OSM: waste containers count over Populated area
+        entry = {
+            'numeratorUnit': 'n',
+            'denominatorUnit': 'km2',
+        }
+        s = unit_to_str(entry)
+        self.assertEqual(s, ' n/km2')
+
+        s = unit_to_str(entry, sigma=True)
+        self.assertEqual(s, '')
+
+        # Air temperature
+        entry = {
+            'numeratorUnit': 'celc_deg',
+            'denominatorUnit': '1',
+        }
+        s = unit_to_str(entry)
+        self.assertEqual(s, ' celc_deg')
+
+        # Man-days above 32°C, (+1°C scenario) over area km2
+        entry = {
+            'numeratorUnit': 'other',
+            'denominatorUnit': 'km2',
+        }
+        s = unit_to_str(entry)
+        self.assertEqual(s, '')
 
 
 if __name__ == '__main__':
