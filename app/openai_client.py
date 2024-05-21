@@ -1,6 +1,7 @@
 import asyncio
 import re
 
+import ujson as json
 from openai import AsyncOpenAI
 from starlette.exceptions import HTTPException
 
@@ -87,13 +88,10 @@ class OpenAIClient:
         return message_text
 
 
-def get_area_name_or_tags(geojson: dict) -> str:
+def get_properties(geojson: dict) -> str:
     try:
-        name = geojson['properties']['tags']['name:en']
-        return f'({name})'
-    except KeyError:
         return '(input GeoJSON properties: ' + json.dumps(geojson['properties']) + ')'
-    finally:
+    except KeyError:
         return ''
 
 
@@ -105,13 +103,13 @@ def get_llm_prompt(
         selected_area_geojson: dict,
         reference_area_geojson: dict,
 ) -> str:
-    reference_area_name = get_area_name_or_tags(reference_area_geojson)
-    selected_area_name = get_area_name_or_tags(selected_area_geojson)
-    LOGGER.debug('reference_area geom is %s, reference_area name is %s', 'not empty' if reference_area_geojson else 'empty', reference_area_name)
-    LOGGER.debug('selected_area geom is %s, selected_area name is %s', 'not empty' if selected_area_geojson else 'empty', selected_area_name)
-    prompt_start = f'Here is the description of the user\'s selected area {selected_area_name} compared to '
+    reference_area_props = get_properties(reference_area_geojson)
+    selected_area_props = get_properties(selected_area_geojson)
+    LOGGER.debug('reference_area geom is %s', 'not empty' if reference_area_geojson else 'empty')
+    LOGGER.debug('selected_area geom is %s', 'not empty' if selected_area_geojson else 'empty')
+    prompt_start = f'Here is the description of the user\'s selected area {selected_area_props} compared to '
     if reference_area_geojson:
-        prompt_start += f'user\'s reference area {reference_area_name} and the world:'
+        prompt_start += f'user\'s reference area {reference_area_props} and the world:'
     else:
         prompt_start += 'the world for the reference:'
     prompt_end = indicator_description + f'''
