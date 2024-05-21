@@ -13,7 +13,7 @@ indicators_graphql = """
 {
   polygonStatistic (polygonStatisticRequest: {polygon: "%s"})
   {
-      bivariateStatistic{indicators{name, unit{id}}}
+      bivariateStatistic{indicators{name, label, description, emoji, unit{id}}}
   }
 }
 """
@@ -40,10 +40,12 @@ advanced_analytics_graphql = """
 """
 
 
-async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> list[str]:
+async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> tuple[list[str], str]:
     '''
     accepts selected_area and reference_area as geojson.
-    returns textual description of indicators stats for selected_area compared to world and reference_area
+    returns tuple:
+        - textual description of indicators stats for selected_area compared to world and reference_area
+        - descriptions of indicators used in stats
     '''
     headers = {
         'User-Agent': settings.USER_AGENT,
@@ -54,14 +56,26 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
         if reference_area:
             analytics_reference_area = await query_insights_api(session, advanced_analytics_graphql, reference_area)
         analytics_world = await query_insights_api(session, advanced_analytics_graphql)
-        units = await query_insights_api(session, indicators_graphql)
+        metadata = await query_insights_api(session, indicators_graphql)
 
-    calculations_world = flatten_analytics(analytics_world, units)
-    calculations_selected_area = flatten_analytics(analytics_selected_area, units)
-    calculations_reference_area = flatten_analytics(analytics_reference_area, units) if reference_area else {}
+    metadata = {
+        x['name']: {
+            'unit': x['unit']['id'],
+            'emoji': x['emoji'],
+            'label': x['label'],
+            'description': x['description'],
+        }
+        for x in metadata['data']['polygonStatistic']['bivariateStatistic']['indicators']
+    }
+    descriptions = {x['label']: x['description'] for x in metadata.values() if x['description']}
+    descriptions_txt = '''Here are descriptions for some indicators:
+    ''' + ';\n'.join(f'{k}: {v}' for k, v in descriptions.items())
+    calculations_world = flatten_analytics(analytics_world, metadata)
+    calculations_selected_area = flatten_analytics(analytics_selected_area, metadata)
+    calculations_reference_area = flatten_analytics(analytics_reference_area, metadata) if reference_area else {}
     sorted_calculations = get_sorted_area_stats(calculations_world, calculations_selected_area, calculations_reference_area)
 
-    return to_readable_sentence(sorted_calculations, calculations_world, calculations_reference_area, units)
+    return to_readable_sentence(sorted_calculations, calculations_world, calculations_reference_area), descriptions_txt
 
 
 async def query_insights_api(session: ClientSession, graphql: str, geojson=None) -> dict:
@@ -81,17 +95,11 @@ async def query_insights_api(session: ClientSession, graphql: str, geojson=None)
         return data
 
 
-def flatten_analytics(data: dict, units: dict) -> dict[tuple, dict]:
+def flatten_analytics(data: dict, metadata: dict) -> dict[tuple, dict]:
     '''
-    flatten advancedAnalytics response for the world or selected area, add units
+    flatten advancedAnalytics response for the world or selected area, add units & emoji
     and return a dict (calculation, numerator, denominator) -> {calc_data}
     '''
-    units = {
-        x['name']: x['unit']['id']
-        for x in units['data']['polygonStatistic']['bivariateStatistic']['indicators']
-    }
-    # possible units are:
-    # nW_cm2_sr None celc_deg km2 m days fract ppl deg m_s2 W_m2 h USD other n km unixtime index
 
     calculations_world = {}
     for item in data['data']['polygonStatistic']['analytics']['advancedAnalytics']:
@@ -118,8 +126,9 @@ def flatten_analytics(data: dict, units: dict) -> dict[tuple, dict]:
                 'calculation': calculation,
                 'value': value,
                 'quality': quality,
-                'numeratorUnit': units[numerator],
-                'denominatorUnit': units[denominator],
+                'emoji': metadata[numerator]['emoji'],
+                'numeratorUnit': metadata[numerator]['unit'],
+                'denominatorUnit': metadata[denominator]['unit'],
             }
     return calculations_world
 
@@ -157,12 +166,29 @@ def get_sorted_area_stats(
 
     # Sort the list of calculations by the absolute value of the quality in ascending order
     return sorted(calculations_selected_area.values(), key=lambda x: (
-        int(abs(x['quality'])),
+        int(abs(x['quality']) / 2) * 2,
         -x['reference_area_sigma'],  # <- will be the same for all rows if reference_area is None
         -x['world_sigma'],
         x['numerator'],
         x['value']
     ))
+
+
+def unit_to_str(entry: dict, sigma=False):
+    # possible units are:
+    # nW_cm2_sr None celc_deg km2 m days fract ppl deg m_s2 W_m2 h USD other n km unixtime index
+
+    if (sigma or entry['denominatorUnit'] == entry['numeratorUnit'] or
+            entry['numeratorUnit'] in ('other', 'index', None, 'fract') or
+            (entry['numeratorUnit'] == 'n' and entry['denominatorUnit'] == '1')):
+        return ''
+
+    s = entry['numeratorUnit'] or ''
+    if entry['denominatorUnit'] and entry['denominatorUnit'] != '1':
+        s += '/' + entry['denominatorUnit']
+    if s:
+        s = ' ' + s
+    return s
 
 
 def value_to_str(x: float, entry: dict, sigma=False):
@@ -177,27 +203,27 @@ def value_to_str(x: float, entry: dict, sigma=False):
             return str(timedelta(seconds=int(x)))
         return datetime.fromtimestamp(int(x)).isoformat()
 
+    unit_str = unit_to_str(entry, sigma)
     # Format the value to be more readable, especially handling scientific notation.
-    return f'{x:.2f}' if x > 1e-3 else f'{x:.2e}'
+    return (f'{x:.2f}' if x > 1e-3 else f'{x:.2e}') + unit_str
 
 
 def to_readable_sentence(
         selected_area_data: list[dict],
         world_data: dict[tuple, dict],
         reference_area_data: dict[tuple, dict] = None,
-        units: dict = None,
 ) -> list[str]:
     '''
     compose a list of readable sentences that describe analytics
-    for selected_area, world and reference_area (Area Of Interest)
+    for selected_area, world and reference_area
     '''
     readable_sentences = []
 
     for entry in selected_area_data:
         numerator_label = entry['numeratorLabel']
+        if entry['emoji']:
+            numerator_label = entry['emoji'] + ' ' + numerator_label
 
-        if entry['denominatorLabel'] == "Area":
-            entry['denominatorLabel'] = "area km2"
         denominator_label = " over " + entry['denominatorLabel']
         if entry['denominatorLabel'] == "1":
             denominator_label = ""

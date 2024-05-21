@@ -86,11 +86,12 @@ async def llm_analytics(request: 'Request') -> 'Response':
     LOGGER.debug('user bio: %s', bio)
 
     LOGGER.debug(f'asking insights-api {settings.INSIGHTS_API_URL} for advanced analytics..')
-    sentences = await get_analytics_sentences(selected_area_geojson, reference_area_geojson)
+    sentences, indicator_description = await get_analytics_sentences(selected_area_geojson, reference_area_geojson)
     LOGGER.debug('got advanced analytics')
 
     # build cache key from request and check if it's in llm_cache table
-    llm_request = get_llm_prompt(sentences, bio, selected_area_geojson, reference_area_geojson)
+    lang = request.headers.get('User-Language')
+    llm_request = get_llm_prompt(sentences, indicator_description, bio, lang, selected_area_geojson, reference_area_geojson)
     llm_instructions = settings.OPENAI_INSTRUCTIONS
     to_cache = f'instructions: {llm_instructions}; prompt: {llm_request}'
     cache_key = hashlib.md5(to_cache.encode("utf-8")).hexdigest()

@@ -1,6 +1,7 @@
 import asyncio
 import re
 
+import ujson as json
 from openai import AsyncOpenAI
 from starlette.exceptions import HTTPException
 
@@ -87,25 +88,36 @@ class OpenAIClient:
         return message_text
 
 
-def get_llm_prompt(sentences: list[str], bio: str, selected_area_geojson: dict, reference_area_geojson: dict) -> str:
+def get_properties(geojson: dict) -> str:
     try:
-        reference_area_name = reference_area_geojson['properties']['tags']['name:en']
-        reference_area_name = f'({reference_area_name})'
+        return '(input GeoJSON properties: ' + json.dumps(geojson['properties']) + ')'
     except KeyError:
-        reference_area_name = ''
-    try:
-        selected_area_name = selected_area_geojson['properties']['tags']['name:en']
-        selected_area_name = f'({selected_area_name})'
-    except KeyError:
-        selected_area_name = ''
-    LOGGER.debug('reference_area geom is %s, reference_area name is %s', 'not empty' if reference_area_geojson else 'empty', reference_area_name)
-    LOGGER.debug('selected_area geom is %s, selected_area name is %s', 'not empty' if selected_area_geojson else 'empty', selected_area_name)
-    prompt_start = f'Here is the description of the user\'s selected area {selected_area_name} compared to '
+        return ''
+
+
+def get_llm_prompt(
+        sentences: list[str],
+        indicator_description: str,
+        bio: str,
+        lang: str,
+        selected_area_geojson: dict,
+        reference_area_geojson: dict,
+) -> str:
+    reference_area_props = get_properties(reference_area_geojson)
+    selected_area_props = get_properties(selected_area_geojson)
+    LOGGER.debug('reference_area geom is %s', 'not empty' if reference_area_geojson else 'empty')
+    LOGGER.debug('selected_area geom is %s', 'not empty' if selected_area_geojson else 'empty')
+    prompt_start = f'Here is the description of the user\'s selected area {selected_area_props} compared to '
     if reference_area_geojson:
-        prompt_start += f'user\'s area of interest {reference_area_name} and the world for the reference:'
+        prompt_start += f'user\'s reference area {reference_area_props} and the world:'
     else:
         prompt_start += 'the world for the reference:'
-    prompt_end = f'What the user wrote about themselves: "{bio}" '
+    prompt_end = indicator_description + f'''
+        User wrote in their bio: "{bio}" '''
+    if lang:
+        prompt_end += f'''
+            User have selected a language: {lang}. Answer in that language.
+        '''
 
     # decide how many sentences we can send respecting max context length
     limit = settings.OPENAI_CONTEXT_LENGTH - len(prompt_start) - len(prompt_end)
