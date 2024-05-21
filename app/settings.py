@@ -21,7 +21,7 @@ class Settings:
 
     USER_AGENT: str = 'insights-llm-api'
     OPENAI_INSTRUCTIONS: str = None
-    OPENAI_CONTEXT_LENGTH: int = 32000
+    OPENAI_CONTEXT_LENGTH: int = 128000
     OPENAI_ASSISTANT: str = None
 
     @property
