@@ -222,7 +222,7 @@ def to_readable_sentence(
     for entry in selected_area_data:
         numerator_label = entry['numeratorLabel']
         if entry['emoji']:
-            numerator_label += ' ' + entry['emoji']
+            numerator_label = entry['emoji'] + ' ' + numerator_label
 
         denominator_label = " over " + entry['denominatorLabel']
         if entry['denominatorLabel'] == "1":

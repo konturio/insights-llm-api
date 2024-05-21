@@ -35,7 +35,7 @@ class TestAnalytics(unittest.TestCase):
             'reference_area_sigma': 0,
         }]
 
-        expected = 'mean of Population without a car 🚗 over Population is 0.32 (globally 0.01, 4.30 sigma)'
+        expected = 'mean of 🚗 Population without a car over Population is 0.32 (globally 0.01, 4.30 sigma)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
@@ -69,7 +69,7 @@ class TestAnalytics(unittest.TestCase):
             'reference_area_sigma': 0,
         }]
 
-        expected = 'mean of OSM last edit 🐱 is 2024-04-25T09:02:54 (globally 2020-09-14T23:51:05, 1.00 sigma)'
+        expected = 'mean of 🐱 OSM last edit is 2024-04-25T09:02:54 (globally 2020-09-14T23:51:05, 1.00 sigma)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
