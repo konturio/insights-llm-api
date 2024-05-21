@@ -133,7 +133,7 @@ def flatten_analytics(data: dict, metadata: dict) -> dict[tuple, dict]:
     return calculations_world
 
 
-def calc_sigma(calculations: dict, ref: dict, key: tuple) -> float:
+def calc_sigma(calculations: dict, ref: dict, world: dict, key: tuple) -> float:
     '''
     Calculate the sigma value for the 'mean' calculation type.
 
@@ -142,12 +142,12 @@ def calc_sigma(calculations: dict, ref: dict, key: tuple) -> float:
     a dimensionless value that can be used for sorting different types of measurements
     '''
     stddev_key = 'stddev', *key[1:]
-    if key[0] != 'mean' or key not in ref or stddev_key not in ref:
+    if key[0] != 'mean' or key not in ref or stddev_key not in world:
         return 0
 
     return abs(
         (calculations['value'] - ref[key]["value"]) /
-        ref[stddev_key]["value"]
+        world[stddev_key]["value"]
     )
 
 
@@ -161,8 +161,8 @@ def get_sorted_area_stats(
     and return a list [{calc_data}] sorted by quality, sigma, numerator & value
     '''
     for key, v in calculations_selected_area.items():
-        v['world_sigma'] = calc_sigma(v, calculations_world, key)
-        v['reference_area_sigma'] = calc_sigma(v, calculations_reference_area, key)
+        v['world_sigma'] = calc_sigma(v, calculations_world, calculations_world, key)
+        v['reference_area_sigma'] = calc_sigma(v, calculations_reference_area, calculations_world, key)
 
     # Sort the list of calculations by the absolute value of the quality in ascending order
     return sorted(calculations_selected_area.values(), key=lambda x: (
