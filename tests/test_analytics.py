@@ -15,6 +15,7 @@ class TestAnalytics(unittest.TestCase):
                  'calculation': 'mean',
                  'value': 0.009002802597977946,
                  'quality': 0.33564222905226,
+                 'emoji': '🚗',
                  'numeratorUnit': 'ppl',
                  'denominatorUnit': 'ppl',
             }
@@ -27,13 +28,14 @@ class TestAnalytics(unittest.TestCase):
             'calculation': 'mean',
             'value': 0.3175384925724989,
             'quality': 0.7798245940871434,
+            'emoji': '🚗',
             'numeratorUnit': 'ppl',
             'denominatorUnit': 'ppl',
             'world_sigma': 4.3034507224487655,
             'reference_area_sigma': 0,
         }]
 
-        expected = 'mean of Population without a car over Population is 0.32 (globally 0.01, 4.30 sigma)'
+        expected = 'mean of Population without a car 🚗 over Population is 0.32 (globally 0.01, 4.30 sigma)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
@@ -47,6 +49,7 @@ class TestAnalytics(unittest.TestCase):
                 'calculation': 'mean',
                 'value': 1600113065.1491652,
                 'quality': 0.02838493267083375,
+                'emoji': '🐱',
                 'numeratorUnit': 'unixtime',
                 'denominatorUnit': None
             }
@@ -59,13 +62,14 @@ class TestAnalytics(unittest.TestCase):
             'calculation': 'mean',
             'value': 1714021374.125,
             'quality': 0.0002680225867511481,
+            'emoji': '🐱',
             'numeratorUnit': 'unixtime',
             'denominatorUnit': None,
             'world_sigma': 1.0016197183988316,
             'reference_area_sigma': 0,
         }]
 
-        expected = 'mean of OSM last edit is 2024-04-25T09:02:54 (globally 2020-09-14T23:51:05, 1.00 sigma)'
+        expected = 'mean of OSM last edit 🐱 is 2024-04-25T09:02:54 (globally 2020-09-14T23:51:05, 1.00 sigma)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
@@ -79,6 +83,7 @@ class TestAnalytics(unittest.TestCase):
                 'calculation': 'mean',
                 'value': 113065.1491652,
                 'quality': 0.02838493267083375,
+                'emoji': None,
                 'numeratorUnit': 'unixtime',
                 'denominatorUnit': None
             }
@@ -91,6 +96,7 @@ class TestAnalytics(unittest.TestCase):
             'calculation': 'stddev',
             'value': 21374.125,
             'quality': 0.0002680225867511481,
+            'emoji': None,
             'numeratorUnit': 'unixtime',
             'denominatorUnit': None,
             'world_sigma': 0,
@@ -111,6 +117,7 @@ class TestAnalytics(unittest.TestCase):
                 'calculation': 'max',
                 'value': 130509.65801594242,
                 'quality': 0.2901225640920188,
+                'emoji': None,
                 'numeratorUnit': 'USD',
                 'denominatorUnit': 'ppl',
             }
@@ -123,6 +130,7 @@ class TestAnalytics(unittest.TestCase):
             'calculation': 'max',
             'value': 71535.68400170161,
             'quality': 0.41165680673194294,
+            'emoji': None,
             'numeratorUnit': 'USD',
             'denominatorUnit': 'ppl',
             'world_sigma': 0,
@@ -143,6 +151,7 @@ class TestAnalytics(unittest.TestCase):
                  'calculation': 'mean',
                  'value': 0.009002802597977946,
                  'quality': 0.33564222905226,
+                 'emoji': None,
                  'numeratorUnit': 'ppl',
                  'denominatorUnit': 'ppl',
             }
@@ -156,6 +165,7 @@ class TestAnalytics(unittest.TestCase):
                  'calculation': 'mean',
                  'value': 0.2,
                  'quality': 0.7,
+                 'emoji': None,
                  'numeratorUnit': 'ppl',
                  'denominatorUnit': 'ppl',
             }
@@ -168,6 +178,7 @@ class TestAnalytics(unittest.TestCase):
             'calculation': 'mean',
             'value': 0.3175384925724989,
             'quality': 0.7798245940871434,
+            'emoji': None,
             'numeratorUnit': 'ppl',
             'denominatorUnit': 'ppl',
             'world_sigma': 4.3034507224487655,

@@ -97,7 +97,14 @@ def get_area_name_or_tags(geojson: dict) -> str:
         return ''
 
 
-def get_llm_prompt(sentences: list[str], bio: str, lang: str, selected_area_geojson: dict, reference_area_geojson: dict) -> str:
+def get_llm_prompt(
+        sentences: list[str],
+        indicator_description: str,
+        bio: str,
+        lang: str,
+        selected_area_geojson: dict,
+        reference_area_geojson: dict,
+) -> str:
     reference_area_name = get_area_name_or_tags(reference_area_geojson)
     selected_area_name = get_area_name_or_tags(selected_area_geojson)
     LOGGER.debug('reference_area geom is %s, reference_area name is %s', 'not empty' if reference_area_geojson else 'empty', reference_area_name)
@@ -107,7 +114,8 @@ def get_llm_prompt(sentences: list[str], bio: str, lang: str, selected_area_geoj
         prompt_start += f'user\'s reference area {reference_area_name} and the world:'
     else:
         prompt_start += 'the world for the reference:'
-    prompt_end = f'User wrote in their bio: "{bio}" '
+    prompt_end = indicator_description + f'''
+        User wrote in their bio: "{bio}" '''
     if lang:
         prompt_end += f'''
             User have selected a language: {lang}. Answer in that language.
