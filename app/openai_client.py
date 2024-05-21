@@ -1,7 +1,6 @@
 import asyncio
 import re
 
-import ujson as json
 from openai import AsyncOpenAI
 from starlette.exceptions import HTTPException
 
@@ -90,9 +89,9 @@ class OpenAIClient:
 
 def get_properties(geojson: dict) -> str:
     try:
-        return '(input GeoJSON properties: ' + json.dumps(geojson['properties']) + ')'
+        return '(input GeoJSON properties: ' + str(geojson['properties']) + ')'
     except KeyError:
-        return ''
+        return '(not available)'
 
 
 def get_llm_prompt(
@@ -107,9 +106,17 @@ def get_llm_prompt(
     selected_area_props = get_properties(selected_area_geojson)
     LOGGER.debug('reference_area geom is %s', 'not empty' if reference_area_geojson else 'empty')
     LOGGER.debug('selected_area geom is %s', 'not empty' if selected_area_geojson else 'empty')
-    prompt_start = f'Here is the description of the user\'s selected area {selected_area_props} compared to '
+    prompt_start = f'Selected area properties: {selected_area_props}'
     if reference_area_geojson:
-        prompt_start += f'user\'s reference area {reference_area_props} and the world:'
+        prompt_start += f'''
+            User's reference area properties: {reference_area_props}
+
+            You are given values for three different areas. Selected region  area is the area you are writing the report about. Reference area is the one picked by user, likely the one that is easy for them to understand, likely being their home or primary region of operation. World values are given to put the difference between selected and reference area into perspective, or to serve as reference when no reference area is given. You may be provided with properties of the geographic objects of selected area and reference area. If properties are not available or lack names, call them "Area you selected" and "Your reference area" respectively. Start report with noting which area you will call what, something like: "Comparing your selected area to your reference area New Zhlobin".
+        '''
+    prompt_start += f'''
+        Here is the description of the user\'s selected area compared to '''
+    if reference_area_geojson:
+        prompt_start += f'user\'s reference area and the world:'
     else:
         prompt_start += 'the world for the reference:'
     prompt_end = indicator_description + f'''

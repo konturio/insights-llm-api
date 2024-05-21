@@ -107,7 +107,7 @@ async def llm_analytics(request: 'Request') -> 'Response':
         LOGGER.debug('found LLM response for %s model in the cache', llm_model)
         return JSONResponse({'data': result})
 
-    LOGGER.debug('\n'.join(llm_request.split(';')))
+    LOGGER.debug('\n'.join(llm_request.split(';')).replace('"', '\\"'))
     LOGGER.debug('asking LLM for commentary..')
 
     # uncomment to debug only prompt, without querying LLM:
