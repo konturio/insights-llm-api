@@ -92,7 +92,7 @@ def get_area_name_or_tags(geojson: dict) -> str:
         name = geojson['properties']['tags']['name:en']
         return f'({name})'
     except KeyError:
-        return '(OSM tags: ' + ', '.join(geojson['properties']['tags'].values()) + ')'
+        return '(input GeoJSON properties: ' + json.dumps(geojson['properties']) + ')'
     finally:
         return ''
 
