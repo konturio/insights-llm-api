@@ -107,7 +107,7 @@ def get_llm_prompt(
     LOGGER.debug('reference_area geom is %s', 'not empty' if reference_area_geojson else 'empty')
     LOGGER.debug('selected_area geom is %s', 'not empty' if selected_area_geojson else 'empty')
     prompt_start = f'Selected area properties: {selected_area_props}'
-    if reference_area_geojson:
+    if reference_area_geojson and reference_area_geojson != selected_area_geojson:
         prompt_start += f'''
             User's reference area properties: {reference_area_props}
 
@@ -125,16 +125,6 @@ def get_llm_prompt(
         prompt_end += f'''
             User have selected a language: {lang}. Answer in that language.
         '''
-
-    # decide how many sentences we can send respecting max context length
-    limit = settings.OPENAI_CONTEXT_LENGTH - len(prompt_start) - len(prompt_end)
-    num_sentences = 0
-    for s in sentences:
-        limit -= len(s)
-        if limit < 0:
-            break
-        num_sentences += 1
-    LOGGER.debug('num_sentences: %s of %s', num_sentences, len(sentences))
-    analytics_txt = ';\n'.join(sentences[:num_sentences])
+    analytics_txt = ';\n'.join(sentences)
 
     return re.sub(r'\s+', ' ', f'{prompt_start} {analytics_txt} {prompt_end}')

@@ -100,8 +100,9 @@ async def llm_analytics(request: 'Request') -> 'Response':
     llm_model = await openai_client.model
 
     conn = await get_db_conn()
+    # select for update so equal requests wait until the first is saved to llm_cache
     if result := await conn.fetchval(
-            'select response from llm_cache where hash = $1 and model_name = $2',
+            'select response from llm_cache where hash = $1 and model_name = $2 for update',
             cache_key, llm_model):
         await conn.close()
         LOGGER.debug('found LLM response for %s model in the cache', llm_model)

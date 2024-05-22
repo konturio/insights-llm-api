@@ -137,7 +137,7 @@ class TestAnalytics(unittest.TestCase):
             'reference_area_sigma': 0,
         }]
 
-        expected = 'max of Gross Domestic Product over Population is 71535.68 USD/ppl (globally 130509.66 USD/ppl)'
+        expected = 'max of Gross Domestic Product over Population is 71,535.68 USD/ppl (globally 130,509.66 USD/ppl)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 

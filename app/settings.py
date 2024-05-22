@@ -21,7 +21,8 @@ class Settings:
 
     USER_AGENT: str = 'insights-llm-api'
     OPENAI_INSTRUCTIONS: str = None
-    OPENAI_CONTEXT_LENGTH: int = 128000
+    # how many analytics sentences we want to include imto prompt:
+    MAX_ANALYTICS_SENTENCES: int = 200
     OPENAI_ASSISTANT: str = None
 
     @property

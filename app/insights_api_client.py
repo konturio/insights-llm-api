@@ -39,6 +39,16 @@ advanced_analytics_graphql = """
 }
 """
 
+# currently present on dev, removed on prod
+ignore_indicators = (
+    'mhe_index',
+    'coping_capacity_index',
+    'resilience_index',
+    'vulnerability_index',
+    'foursquare_visits_count',
+    'foursquare_places_count',
+    'mhr_index',
+)
 
 async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> tuple[list[str], str]:
     '''
@@ -67,13 +77,19 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
         }
         for x in metadata['data']['polygonStatistic']['bivariateStatistic']['indicators']
     }
-    descriptions = {x['label']: x['description'] for x in metadata.values() if x['description']}
-    descriptions_txt = '''Here are descriptions for some indicators:
-    ''' + ';\n'.join(f'{k}: {v}' for k, v in descriptions.items())
     calculations_world = flatten_analytics(analytics_world, metadata)
     calculations_selected_area = flatten_analytics(analytics_selected_area, metadata)
     calculations_reference_area = flatten_analytics(analytics_reference_area, metadata) if reference_area else {}
     sorted_calculations = get_sorted_area_stats(calculations_world, calculations_selected_area, calculations_reference_area)
+
+    # select descriptions of indicators that got included in sorted_calculations
+    descriptions = {
+        metadata[x['numerator']]['label']: metadata[x['numerator']]['description']
+        for x in sorted_calculations
+    }
+    descriptions_txt = '''
+        Here are descriptions for indicators:
+    ''' + ';\n'.join(f'{k}: {v}' for k, v in descriptions.items() if v)
 
     return to_readable_sentence(sorted_calculations, calculations_world, calculations_reference_area), descriptions_txt
 
@@ -109,6 +125,9 @@ def flatten_analytics(data: dict, metadata: dict) -> dict[tuple, dict]:
         denominatorLabel = item['denominatorLabel']
 
         if numeratorLabel == "Population (previous version)":
+            continue
+
+        if numerator in ignore_indicators:
             continue
 
         # Iterate over each 'analytics' entry and add a dictionary for each calculation to the list
@@ -158,7 +177,8 @@ def get_sorted_area_stats(
 ) -> list[dict]:
     '''
     add sigma to area analytics compared to the world mean metric
-    and return a list [{calc_data}] sorted by quality, sigma, numerator & value
+    and return a list [{calc_data}] sorted by quality, sigma, numerator & value.
+    max list size = MAX_ANALYTICS_SENTENCES
     '''
     for key, v in calculations_selected_area.items():
         v['world_sigma'] = calc_sigma(v, calculations_world, calculations_world, key)
@@ -171,7 +191,7 @@ def get_sorted_area_stats(
         -x['world_sigma'],
         x['numerator'],
         x['value']
-    ))
+    ))[:settings.MAX_ANALYTICS_SENTENCES]
 
 
 def unit_to_str(entry: dict, sigma=False):
@@ -205,7 +225,7 @@ def value_to_str(x: float, entry: dict, sigma=False):
 
     unit_str = unit_to_str(entry, sigma)
     # Format the value to be more readable, especially handling scientific notation.
-    return (f'{x:.2f}' if x > 1e-3 else f'{x:.2e}') + unit_str
+    return (f'{x:,.2f}' if x > 1e-3 else f'{x:.2e}') + unit_str
 
 
 def to_readable_sentence(
