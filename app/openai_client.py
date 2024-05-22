@@ -89,6 +89,11 @@ class OpenAIClient:
 
 def get_properties(geojson: dict) -> str:
     try:
+        if geojson.get('type') == 'FeatureCollection':
+            s = '(input GeoJSON is FeatureCollection with multiple properties: '
+            s += ', '.join(str(x['properties']) for x in geojson['features'] if x['properties']) or 'not available'
+            s += ')'
+            return s
         return '(input GeoJSON properties: ' + str(geojson['properties']) + ')'
     except KeyError:
         return '(not available)'
