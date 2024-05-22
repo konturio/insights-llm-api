@@ -194,6 +194,7 @@ class TestAnalytics(unittest.TestCase):
         entry = {
             'numeratorUnit': 'ppl',
             'denominatorUnit': 'ppl',
+            'denominatorLabel': 'Population',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, '')
@@ -202,6 +203,7 @@ class TestAnalytics(unittest.TestCase):
         entry = {
             'numeratorUnit': 'n',
             'denominatorUnit': 'km2',
+            'denominatorLabel': 'Area',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, ' n/km2')
@@ -212,7 +214,8 @@ class TestAnalytics(unittest.TestCase):
         # Air temperature
         entry = {
             'numeratorUnit': 'celc_deg',
-            'denominatorUnit': '1',
+            'denominatorUnit': None,
+            'denominatorLabel': '1',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, ' celc_deg')
@@ -221,6 +224,7 @@ class TestAnalytics(unittest.TestCase):
         entry = {
             'numeratorUnit': 'other',
             'denominatorUnit': 'km2',
+            'denominatorLabel': 'Area',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, '')

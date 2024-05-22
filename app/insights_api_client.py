@@ -134,7 +134,12 @@ def flatten_analytics(data: dict, metadata: dict) -> dict[tuple, dict]:
         for analytic in item['analytics']:
             if analytic.get('value') is None:
                 continue
+
             calculation = analytic['calculation']
+            if calculation == 'sum' and metadata[numerator]['unit'] == 'unixtime':
+                # timestamp addition makes no sense
+                continue
+
             value = analytic['value']
             quality = analytic['quality']
             calculations_world[(calculation, numerator, denominator)] = {
@@ -200,7 +205,7 @@ def unit_to_str(entry: dict, sigma=False):
 
     if (sigma or entry['denominatorUnit'] == entry['numeratorUnit'] or
             entry['numeratorUnit'] in ('other', 'index', None, 'fract') or
-            (entry['numeratorUnit'] == 'n' and entry['denominatorUnit'] == '1')):
+            (entry['numeratorUnit'] == 'n' and entry['denominatorLabel'] == '1')):
         return ''
 
     s = entry['numeratorUnit'] or ''
@@ -238,7 +243,9 @@ def to_readable_sentence(
     for selected_area, world and reference_area
     '''
     readable_sentences = []
+    prev_axis = None
 
+    # selected_area_data is sorted by importance
     for entry in selected_area_data:
         numerator_label = entry['numeratorLabel']
         if entry['emoji']:
@@ -280,6 +287,13 @@ def to_readable_sentence(
             #f"with a quality metric of {quality_str}."
         )
         # example: mean of Air temperature (min) is 15.73 (globally 1.03) (15.73 sigma)
-        readable_sentences.append(sentence)
+
+        if prev_axis == f'{numerator_label}{denominator_label}':
+            sentence = f', {calculation_type} is {value_str}{reference_area_str}{world_str}'
+            readable_sentences[-1] += sentence
+        else:
+            readable_sentences.append(sentence)
+
+        prev_axis = f'{numerator_label}{denominator_label}'
 
     return readable_sentences
