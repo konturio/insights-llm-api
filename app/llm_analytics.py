@@ -94,6 +94,7 @@ async def llm_analytics(request: 'Request') -> 'Response':
     llm_request = get_llm_prompt(sentences, indicator_description, bio, lang, selected_area_geojson, reference_area_geojson)
     llm_instructions = settings.OPENAI_INSTRUCTIONS
     to_cache = f'instructions: {llm_instructions}; prompt: {llm_request}'
+    LOGGER.debug('\n'.join(llm_request.split(';')).replace('"', '\\"'))
     cache_key = hashlib.md5(to_cache.encode("utf-8")).hexdigest()
 
     openai_client = OpenAIClient()
@@ -108,12 +109,7 @@ async def llm_analytics(request: 'Request') -> 'Response':
         LOGGER.debug('found LLM response for %s model in the cache', llm_model)
         return JSONResponse({'data': result})
 
-    LOGGER.debug('\n'.join(llm_request.split(';')).replace('"', '\\"'))
     LOGGER.debug('asking LLM for commentary..')
-
-    # uncomment to debug only prompt, without querying LLM:
-    #return JSONResponse({'data': {}})
-
     llm_response = await openai_client.get_llm_commentary(llm_request)
     await conn.execute(
         'insert into llm_cache (hash, request, response, model_name) values ($1, $2, $3, $4)',

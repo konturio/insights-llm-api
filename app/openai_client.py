@@ -88,26 +88,27 @@ class OpenAIClient:
 
 
 def get_properties(geojson: dict) -> str:
+    properties = []
+
     def extract_properties(gj: dict) -> list:
         '''
-        Recursively extracts properties from the GeoJSON object.
+        Recursively extracts properties from the GeoJSON object and updates properties var.
         If the object is a FeatureCollection, it iterates over its features
         and extracts properties from each feature.
         '''
         if gj.get('type') == 'FeatureCollection':
-            properties_list = []
             # Iterate through all features in the FeatureCollection
             for feature in gj.get('features') or []:
                 # Recursively extract properties from each feature
-                properties_list.extend(extract_properties(feature))
-            return properties_list
-        return [gj.get('properties')]
+                extract_properties(feature)
+            return
+        # The base case: we're at a leaf and extract actual properties
+        properties.append(gj.get('properties'))
 
-    # Extract properties using the recursive function
-    properties = extract_properties(geojson)
-    # Filter out 'not available' and None properties
-    filtered_properties = [prop for prop in properties if prop]
-    deduplicated_properties = set(str(prop) for prop in filtered_properties)
+    # update `properties` with recursive function
+    extract_properties(geojson)
+    # remove duplicated and empty props
+    deduplicated_properties = set(str(prop) for prop in properties if prop)
     props_str = ', '.join(deduplicated_properties) or 'not available'
     # Construct and return the result string with all unique, deduplicated properties
     return f'(input GeoJSON properties: {props_str})'
