@@ -60,6 +60,12 @@ async def get_user_data(app_id: str, auth_token: str) -> dict:
     return user_data
 
 
+async def get_llm_response_from_cache(conn, cache_key, llm_model):
+    return await conn.fetchval(
+        'select response from llm_cache where hash = $1 and model_name = $2 and response is not null',
+        cache_key, llm_model)
+
+
 async def llm_analytics(request: 'Request') -> 'Response':
     '''
     Handles POST requests to /llm-analytics.
@@ -105,20 +111,34 @@ async def llm_analytics(request: 'Request') -> 'Response':
     llm_model = await openai_client.model
 
     conn = await get_db_conn()
-    # select for update so equal requests wait until the first is saved to llm_cache
-    if result := await conn.fetchval(
-            'select response from llm_cache where hash = $1 and model_name = $2 for update',
-            cache_key, llm_model):
+    if result := await get_llm_response_from_cache(conn, cache_key, llm_model):
         await conn.close()
         LOGGER.debug('found LLM response for %s model in the cache', llm_model)
+        return JSONResponse({'data': result})
+
+    tr = conn.transaction()
+    await tr.start()
+    try:
+        # two equal queries will block, the second will fail with duplicate key error
+        await conn.execute(
+            'insert into llm_cache (hash, request, response, model_name) values ($1, $2, $3, $4)',
+            cache_key, to_cache, None, llm_model,
+        )
+    except asyncpg.exceptions.UniqueViolationError:
+        # other transaction saved an LLM response first, return it
+        await tr.rollback()
+        LOGGER.debug('return response committed by other transaction')
+        result = await get_llm_response_from_cache(conn, cache_key, llm_model)
+        await conn.close()
         return JSONResponse({'data': result})
 
     LOGGER.debug('asking LLM for commentary..')
     llm_response = await openai_client.get_llm_commentary(llm_request)
     await conn.execute(
-        'insert into llm_cache (hash, request, response, model_name) values ($1, $2, $3, $4)',
-        cache_key, to_cache, llm_response, llm_model,
+        'update llm_cache set response = $1 where hash = $2 and model_name = $3',
+        llm_response, cache_key, llm_model,
     )
+    await tr.commit()
     await conn.close()
-    LOGGER.debug('saved LLM response')
+    LOGGER.debug('saved LLM response for hash = %s and model_name = %s', cache_key, llm_model)
     return JSONResponse({'data': llm_response})
