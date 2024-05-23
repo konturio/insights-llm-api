@@ -39,16 +39,6 @@ advanced_analytics_graphql = """
 }
 """
 
-# currently present on dev, removed on prod
-ignore_indicators = (
-    'mhe_index',
-    'coping_capacity_index',
-    'resilience_index',
-    'vulnerability_index',
-    'foursquare_visits_count',
-    'foursquare_places_count',
-    'mhr_index',
-)
 
 async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> tuple[list[str], str]:
     '''
@@ -125,9 +115,6 @@ def flatten_analytics(data: dict, metadata: dict) -> dict[tuple, dict]:
         denominatorLabel = item['denominatorLabel']
 
         if numeratorLabel == "Population (previous version)":
-            continue
-
-        if numerator in ignore_indicators:
             continue
 
         # Iterate over each 'analytics' entry and add a dictionary for each calculation to the list

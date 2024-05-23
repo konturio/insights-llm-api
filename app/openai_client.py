@@ -88,15 +88,29 @@ class OpenAIClient:
 
 
 def get_properties(geojson: dict) -> str:
-    try:
-        if geojson.get('type') == 'FeatureCollection':
-            s = '(input GeoJSON is FeatureCollection with multiple properties: '
-            s += ', '.join(str(x['properties']) for x in geojson['features'] if x['properties']) or 'not available'
-            s += ')'
-            return s
-        return '(input GeoJSON properties: ' + str(geojson['properties']) + ')'
-    except KeyError:
-        return '(not available)'
+    def extract_properties(gj: dict) -> list:
+        '''
+        Recursively extracts properties from the GeoJSON object.
+        If the object is a FeatureCollection, it iterates over its features
+        and extracts properties from each feature.
+        '''
+        if gj.get('type') == 'FeatureCollection':
+            properties_list = []
+            # Iterate through all features in the FeatureCollection
+            for feature in gj.get('features') or []:
+                # Recursively extract properties from each feature
+                properties_list.extend(extract_properties(feature))
+            return properties_list
+        return [gj.get('properties')]
+
+    # Extract properties using the recursive function
+    properties = extract_properties(geojson)
+    # Filter out 'not available' and None properties
+    filtered_properties = [prop for prop in properties if prop]
+    deduplicated_properties = set(str(prop) for prop in filtered_properties)
+    props_str = ', '.join(deduplicated_properties) or 'not available'
+    # Construct and return the result string with all unique, deduplicated properties
+    return f'(input GeoJSON properties: {props_str})'
 
 
 def get_llm_prompt(
@@ -112,7 +126,12 @@ def get_llm_prompt(
     LOGGER.debug('reference_area geom is %s', 'not empty' if reference_area_geojson else 'empty')
     LOGGER.debug('selected_area geom is %s', 'not empty' if selected_area_geojson else 'empty')
     prompt_start = f'Selected area properties: {selected_area_props}'
-    if reference_area_geojson and reference_area_geojson != selected_area_geojson:
+
+    if reference_area_geojson == selected_area_geojson:
+        # compare selected_area only with world
+        reference_area_geojson = None
+
+    if reference_area_geojson:
         prompt_start += f'''
             User's reference area properties: {reference_area_props}
 
