@@ -137,7 +137,7 @@ class TestAnalytics(unittest.TestCase):
             'reference_area_sigma': 0,
         }]
 
-        expected = 'max of Gross Domestic Product over Population is 71535.68 USD/ppl (globally 130509.66 USD/ppl)'
+        expected = 'max of Gross Domestic Product over Population is 71,535.68 USD/ppl (globally 130,509.66 USD/ppl)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
@@ -194,6 +194,7 @@ class TestAnalytics(unittest.TestCase):
         entry = {
             'numeratorUnit': 'ppl',
             'denominatorUnit': 'ppl',
+            'denominatorLabel': 'Population',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, '')
@@ -202,6 +203,7 @@ class TestAnalytics(unittest.TestCase):
         entry = {
             'numeratorUnit': 'n',
             'denominatorUnit': 'km2',
+            'denominatorLabel': 'Area',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, ' n/km2')
@@ -212,7 +214,8 @@ class TestAnalytics(unittest.TestCase):
         # Air temperature
         entry = {
             'numeratorUnit': 'celc_deg',
-            'denominatorUnit': '1',
+            'denominatorUnit': None,
+            'denominatorLabel': '1',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, ' celc_deg')
@@ -221,6 +224,7 @@ class TestAnalytics(unittest.TestCase):
         entry = {
             'numeratorUnit': 'other',
             'denominatorUnit': 'km2',
+            'denominatorLabel': 'Area',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, '')

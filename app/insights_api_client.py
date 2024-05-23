@@ -67,13 +67,19 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
         }
         for x in metadata['data']['polygonStatistic']['bivariateStatistic']['indicators']
     }
-    descriptions = {x['label']: x['description'] for x in metadata.values() if x['description']}
-    descriptions_txt = '''Here are descriptions for some indicators:
-    ''' + ';\n'.join(f'{k}: {v}' for k, v in descriptions.items())
     calculations_world = flatten_analytics(analytics_world, metadata)
     calculations_selected_area = flatten_analytics(analytics_selected_area, metadata)
     calculations_reference_area = flatten_analytics(analytics_reference_area, metadata) if reference_area else {}
     sorted_calculations = get_sorted_area_stats(calculations_world, calculations_selected_area, calculations_reference_area)
+
+    # select descriptions of indicators that got included in sorted_calculations
+    descriptions = {
+        metadata[x['numerator']]['label']: metadata[x['numerator']]['description']
+        for x in sorted_calculations
+    }
+    descriptions_txt = '''
+        Here are descriptions for indicators:
+    ''' + ';\n'.join(f'{k}: {v}' for k, v in descriptions.items() if v)
 
     return to_readable_sentence(sorted_calculations, calculations_world, calculations_reference_area), descriptions_txt
 
@@ -115,7 +121,12 @@ def flatten_analytics(data: dict, metadata: dict) -> dict[tuple, dict]:
         for analytic in item['analytics']:
             if analytic.get('value') is None:
                 continue
+
             calculation = analytic['calculation']
+            if calculation == 'sum' and metadata[numerator]['unit'] == 'unixtime':
+                # timestamp addition makes no sense
+                continue
+
             value = analytic['value']
             quality = analytic['quality']
             calculations_world[(calculation, numerator, denominator)] = {
@@ -158,7 +169,8 @@ def get_sorted_area_stats(
 ) -> list[dict]:
     '''
     add sigma to area analytics compared to the world mean metric
-    and return a list [{calc_data}] sorted by quality, sigma, numerator & value
+    and return a list [{calc_data}] sorted by quality, sigma, numerator & value.
+    max list size = MAX_ANALYTICS_SENTENCES
     '''
     for key, v in calculations_selected_area.items():
         v['world_sigma'] = calc_sigma(v, calculations_world, calculations_world, key)
@@ -171,7 +183,7 @@ def get_sorted_area_stats(
         -x['world_sigma'],
         x['numerator'],
         x['value']
-    ))
+    ))[:settings.MAX_ANALYTICS_SENTENCES]
 
 
 def unit_to_str(entry: dict, sigma=False):
@@ -180,7 +192,7 @@ def unit_to_str(entry: dict, sigma=False):
 
     if (sigma or entry['denominatorUnit'] == entry['numeratorUnit'] or
             entry['numeratorUnit'] in ('other', 'index', None, 'fract') or
-            (entry['numeratorUnit'] == 'n' and entry['denominatorUnit'] == '1')):
+            (entry['numeratorUnit'] == 'n' and entry['denominatorLabel'] == '1')):
         return ''
 
     s = entry['numeratorUnit'] or ''
@@ -205,7 +217,7 @@ def value_to_str(x: float, entry: dict, sigma=False):
 
     unit_str = unit_to_str(entry, sigma)
     # Format the value to be more readable, especially handling scientific notation.
-    return (f'{x:.2f}' if x > 1e-3 else f'{x:.2e}') + unit_str
+    return (f'{x:,.2f}' if x > 1e-3 else f'{x:.2e}') + unit_str
 
 
 def to_readable_sentence(
@@ -218,7 +230,9 @@ def to_readable_sentence(
     for selected_area, world and reference_area
     '''
     readable_sentences = []
+    prev_axis = None
 
+    # selected_area_data is sorted by importance
     for entry in selected_area_data:
         numerator_label = entry['numeratorLabel']
         if entry['emoji']:
@@ -260,6 +274,13 @@ def to_readable_sentence(
             #f"with a quality metric of {quality_str}."
         )
         # example: mean of Air temperature (min) is 15.73 (globally 1.03) (15.73 sigma)
-        readable_sentences.append(sentence)
+
+        if prev_axis == f'{numerator_label}{denominator_label}':
+            sentence = f', {calculation_type} is {value_str}{reference_area_str}{world_str}'
+            readable_sentences[-1] += sentence
+        else:
+            readable_sentences.append(sentence)
+
+        prev_axis = f'{numerator_label}{denominator_label}'
 
     return readable_sentences
