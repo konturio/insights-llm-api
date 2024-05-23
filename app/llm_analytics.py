@@ -1,4 +1,5 @@
 import hashlib
+from json.decoder import JSONDecodeError
 
 import asyncpg
 from aiohttp import ClientSession
@@ -71,11 +72,14 @@ async def llm_analytics(request: 'Request') -> 'Response':
         - 'data' (str): analytics for selected area in markdown format
     '''
     # parse input params of original query
-    data = await request.json()
-    app_id = data.get("appId")
-    if not app_id:
+    try:
+        data = await request.json()
+    except JSONDecodeError:
+        raise HTTPException(status_code=400, detail='malformed request')
+    if not (app_id := data.get('appId')):
         raise HTTPException(status_code=400, detail='missing appId')
-    selected_area_geojson = data.get("features") or {}
+    if not (selected_area_geojson := data.get('features')):
+        raise HTTPException(status_code=400, detail='missing features')
 
     LOGGER.debug(f'asking UPS {settings.USER_PROFILE_API_URL} for user data..')
     user_data = await get_user_data(app_id, auth_token=request.headers.get('Authorization') or '')
