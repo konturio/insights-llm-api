@@ -8,6 +8,7 @@ class Settings:
     SENTRY_ENV: str = 'test'
     SENTRY_ENABLED: bool = True
 
+    WORKERS: int = 4
     PORT: int = 8000
     DEBUG: bool = False
 
@@ -33,7 +34,7 @@ class Settings:
             'formatters': {
                 'json': {
                     '()': 'uvicorn.logging.DefaultFormatter',
-                    'fmt': '{"level":"%(levelname)s", "timestamp":"%(asctime)s", "message":"%(message)s", "logger":"%(name)s"}'
+                    'fmt': '{"level":"%(levelname)s", "pid":"%(process)s", "timestamp":"%(asctime)s", "message":"%(message)s", "logger":"%(name)s"}'
                 }
             },
             'handlers': {
