@@ -43,4 +43,4 @@ def create_app():
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run(create_app, host="0.0.0.0", port=settings.PORT, factory=True, log_config=settings.LOG_CONFIG)
+    uvicorn.run("app.main:create_app", host="0.0.0.0", port=settings.PORT, factory=True, log_config=settings.LOG_CONFIG, workers=settings.WORKERS)
