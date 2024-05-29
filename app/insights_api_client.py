@@ -13,7 +13,7 @@ indicators_graphql = """
 {
   polygonStatistic (polygonStatisticRequest: {polygon: "%s"})
   {
-      bivariateStatistic{indicators{name, label, description, emoji, unit{id}}}
+      bivariateStatistic{indicators{name, label, description, emoji, unit{longName}}}
   }
 }
 """
@@ -60,7 +60,7 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
 
     metadata = {
         x['name']: {
-            'unit': x['unit']['id'],
+            'unit': x['unit']['longName'],
             'emoji': x['emoji'],
             'label': x['label'],
             'description': x['description'],
@@ -123,9 +123,19 @@ def flatten_analytics(data: dict, metadata: dict) -> dict[tuple, dict]:
                 continue
 
             calculation = analytic['calculation']
-            if calculation == 'sum' and metadata[numerator]['unit'] == 'unixtime':
-                # timestamp addition makes no sense
-                continue
+            if metadata[numerator]['unit'] == 'date':
+                if calculation == 'sum':
+                    # timestamp addition makes no sense
+                    continue
+
+                if denominatorLabel != '1':
+                    # timestamp divided by area or population makes no sense
+                    continue
+
+            if item['denominatorLabel'] == 'Area':
+                if 'Man-days' in item['numeratorLabel'] or 'Man-distance' in item['numeratorLabel']:
+                    # layers of low interpretability and strange dimensionality (ppl/km, ppl*day/km2)
+                    continue
 
             value = analytic['value']
             quality = analytic['quality']
@@ -187,18 +197,47 @@ def get_sorted_area_stats(
 
 
 def unit_to_str(entry: dict, sigma=False):
-    # possible units are:
-    # nW_cm2_sr None celc_deg km2 m days fract ppl deg m_s2 W_m2 h USD other n km unixtime index
+    ''' possible units are:
+            United States dollar (USD)
+            date (unixtime)
+            days
+            degrees
+            degrees Celsius
+            fraction
+            hours
+            index
+            kilometers
+            meters
+            meters per square second
+            number
+            people
+            square kilometers
+            watt per square metre
+            watts per square centimeter per steradian
+    '''
 
-    if (sigma or entry['denominatorUnit'] == entry['numeratorUnit'] or
-            entry['numeratorUnit'] in ('other', 'index', None, 'fract') or
-            (entry['numeratorUnit'] == 'n' and entry['denominatorLabel'] == '1')):
+    if sigma:
         return ''
 
-    s = entry['numeratorUnit'] or ''
-    if entry['denominatorUnit'] and entry['denominatorUnit'] != '1':
-        s += '/' + entry['denominatorUnit']
-    if s:
+    if entry['denominatorLabel'] == 'Population':
+        if 'Man-distance' in entry['numeratorLabel']:
+            # man-distance has dimensionality ppl*km. ppl*km / ppl == km
+            return ' kilometers'
+        if 'Man-days' in entry['numeratorLabel']:
+            # man-days has dimensionality ppl*days
+            return ' days'
+
+    if (entry['denominatorUnit'] == entry['numeratorUnit'] or
+            entry['numeratorUnit'] in ('index', None, 'fraction') or
+            (entry['numeratorUnit'] == 'number' and entry['denominatorLabel'] == '1')):
+        return ''
+
+    s = entry['numeratorUnit'].replace('number', '') or ''
+    if entry['denominatorUnit'] and entry['denominatorLabel'] != '1':
+        s += ' per ' + (entry['denominatorUnit']
+                .replace('people', 'person')
+                .replace('square kilometers', 'square kilometer'))
+    if s and s[0] != ' ':
         s = ' ' + s
     return s
 
@@ -208,7 +247,7 @@ def value_to_str(x: float, entry: dict, sigma=False):
         return ''
 
     if (not sigma
-            and entry['numeratorUnit'] == 'unixtime'
+            and entry['numeratorUnit'] == 'date'
             and entry['denominatorLabel'] == '1'
             and x < 2000000000):
         if entry['calculation'] == 'stddev':
