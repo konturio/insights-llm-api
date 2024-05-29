@@ -211,7 +211,14 @@ def unit_to_str(entry: dict, sigma=False):
             watts per square centimeter per steradian
     '''
 
-    if (sigma or entry['denominatorUnit'] == entry['numeratorUnit'] or
+    if sigma:
+        return ''
+
+    if entry['denominatorLabel'] == 'Population' and 'Man-distance' in entry['numeratorLabel']:
+        # man-distance has dimensionality ppl*km. ppl*km / ppl == km
+        return ' kilometers'
+
+    if (entry['denominatorUnit'] == entry['numeratorUnit'] or
             entry['numeratorUnit'] in ('index', None, 'fraction') or
             (entry['numeratorUnit'] == 'number' and entry['denominatorLabel'] == '1')):
         return ''

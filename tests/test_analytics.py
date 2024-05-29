@@ -195,6 +195,7 @@ class TestAnalytics(unittest.TestCase):
             'numeratorUnit': 'people',
             'denominatorUnit': 'people',
             'denominatorLabel': 'Population',
+            'numeratorLabel': 'Population without a car',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, '')
@@ -204,6 +205,7 @@ class TestAnalytics(unittest.TestCase):
             'numeratorUnit': 'number',
             'denominatorUnit': 'square kilometers',
             'denominatorLabel': 'Area',
+            'numeratorLabel': 'OSM: waste containers count',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, ' per square kilometer')
@@ -216,6 +218,7 @@ class TestAnalytics(unittest.TestCase):
             'numeratorUnit': 'degrees Celsius',
             'denominatorUnit': None,
             'denominatorLabel': '1',
+            'numeratorLabel': 'Air temperature',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, ' degrees Celsius')
@@ -225,9 +228,20 @@ class TestAnalytics(unittest.TestCase):
             'numeratorUnit': None,
             'denominatorUnit': 'square kilometers',
             'denominatorLabel': 'Area',
+            'numeratorLabel': 'Man-days above 32°C, (+1°C scenario)',
         }
         s = unit_to_str(entry)
         self.assertEqual(s, '')
+
+        # Man-distance to charging stations over Population
+        entry = {
+            'numeratorUnit': None,
+            'denominatorUnit': 'ppl',
+            'denominatorLabel': 'Population',
+            'numeratorLabel': 'Man-distance to charging stations',
+        }
+        s = unit_to_str(entry)
+        self.assertEqual(s, ' kilometers')
 
 
 if __name__ == '__main__':
