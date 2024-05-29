@@ -132,6 +132,11 @@ def flatten_analytics(data: dict, metadata: dict) -> dict[tuple, dict]:
                     # timestamp divided by area or population makes no sense
                     continue
 
+            if item['denominatorLabel'] == 'Area':
+                if 'Man-days' in item['numeratorLabel'] or 'Man-distance' in item['numeratorLabel']:
+                    # layers of low interpretability and strange dimensionality (ppl/km, ppl*day/km2)
+                    continue
+
             value = analytic['value']
             quality = analytic['quality']
             calculations_world[(calculation, numerator, denominator)] = {
@@ -214,9 +219,13 @@ def unit_to_str(entry: dict, sigma=False):
     if sigma:
         return ''
 
-    if entry['denominatorLabel'] == 'Population' and 'Man-distance' in entry['numeratorLabel']:
-        # man-distance has dimensionality ppl*km. ppl*km / ppl == km
-        return ' kilometers'
+    if entry['denominatorLabel'] == 'Population':
+        if 'Man-distance' in entry['numeratorLabel']:
+            # man-distance has dimensionality ppl*km. ppl*km / ppl == km
+            return ' kilometers'
+        if 'Man-days' in entry['numeratorLabel']:
+            # man-days has dimensionality ppl*days
+            return ' days'
 
     if (entry['denominatorUnit'] == entry['numeratorUnit'] or
             entry['numeratorUnit'] in ('index', None, 'fraction') or
