@@ -68,6 +68,7 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
             analytics_reference_area = await query_insights_api(session, advanced_analytics_graphql, reference_area)
             LOGGER.debug('got reference_area analytics with resolution %s', get_analytics_resolution(analytics_reference_area))
         analytics_world = await query_insights_api(session, advanced_analytics_graphql)
+        LOGGER.debug('got world analytics')
         metadata = await query_insights_api(session, indicators_graphql)
         LOGGER.debug('got indicators metadata')
 
