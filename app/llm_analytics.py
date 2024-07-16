@@ -97,7 +97,6 @@ async def llm_analytics(request: 'Request') -> 'Response':
 
     LOGGER.debug(f'asking insights-api {settings.INSIGHTS_API_URL} for advanced analytics..')
     sentences, indicator_description = await get_analytics_sentences(selected_area_geojson, reference_area_geojson)
-    LOGGER.debug('got advanced analytics')
 
     # build cache key from request and check if it's in llm_cache table
     lang = request.headers.get('User-Language')

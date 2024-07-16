@@ -28,6 +28,7 @@ advanced_analytics_graphql = """
             denominator,
             numeratorLabel,
             denominatorLabel,
+            resolution,
             analytics {
                 value,
                 calculation,
@@ -38,6 +39,15 @@ advanced_analytics_graphql = """
   }
 }
 """
+
+
+def get_analytics_resolution(data: dict) -> int:
+    '''
+    currently resolution is the same for all axes in analytics.
+    return resolution of first entry just for debug
+    '''
+    for item in data['data']['polygonStatistic']['analytics']['advancedAnalytics']:
+        return item['resolution']
 
 
 async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> tuple[list[str], str]:
@@ -52,11 +62,15 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
     }
     async with ClientSession(headers=headers) as session:
         analytics_selected_area = await query_insights_api(session, advanced_analytics_graphql, selected_area)
+        LOGGER.debug('got selected_area analytics with resolution %s', get_analytics_resolution(analytics_selected_area))
         analytics_reference_area = {}
         if reference_area:
             analytics_reference_area = await query_insights_api(session, advanced_analytics_graphql, reference_area)
+            LOGGER.debug('got reference_area analytics with resolution %s', get_analytics_resolution(analytics_reference_area))
         analytics_world = await query_insights_api(session, advanced_analytics_graphql)
+        LOGGER.debug('got world analytics')
         metadata = await query_insights_api(session, indicators_graphql)
+        LOGGER.debug('got indicators metadata')
 
     metadata = {
         x['name']: {
@@ -110,6 +124,10 @@ def flatten_analytics(data: dict, metadata: dict) -> dict[tuple, dict]:
     calculations_world = {}
     for item in data['data']['polygonStatistic']['analytics']['advancedAnalytics']:
         numerator = item['numerator']
+        if numerator not in metadata:
+            # indicator not ready yet
+            continue
+
         denominator = item['denominator']
         numeratorLabel = item['numeratorLabel']
         denominatorLabel = item['denominatorLabel']
