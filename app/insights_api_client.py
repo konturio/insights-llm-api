@@ -124,6 +124,10 @@ def flatten_analytics(data: dict, metadata: dict) -> dict[tuple, dict]:
     calculations_world = {}
     for item in data['data']['polygonStatistic']['analytics']['advancedAnalytics']:
         numerator = item['numerator']
+        if numerator not in metadata:
+            # indicator not ready yet
+            continue
+
         denominator = item['denominator']
         numeratorLabel = item['numeratorLabel']
         denominatorLabel = item['denominatorLabel']
