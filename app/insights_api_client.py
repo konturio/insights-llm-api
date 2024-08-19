@@ -103,7 +103,7 @@ async def query_insights_api(session: ClientSession, graphql: str, geojson=None)
     send graphql query to insights-api service for provided geojson
     '''
     geojson = json.dumps(geojson) if geojson else '{"type":"FeatureCollection","features":[]}'
-    query = graphql % geojson.replace('"','\\"')
+    query = graphql % geojson.replace('\\', '\\\\').replace('"','\\"')
     #LOGGER.debug(query)
     async with session.post(settings.INSIGHTS_API_URL, json={'query': query}) as resp:
         if resp.status != 200:
