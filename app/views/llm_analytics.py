@@ -2,62 +2,17 @@ import hashlib
 from json.decoder import JSONDecodeError
 
 import asyncpg
-from aiohttp import ClientSession
 from starlette.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from .secret import Secret
-from .settings import Settings
-from .logger import LOGGER
-from .insights_api_client import get_analytics_sentences
-from .openai_client import get_llm_prompt, OpenAIClient
+from app.clients.insights_api_client import get_analytics_sentences
+from app.clients.openai_client import get_llm_prompt, OpenAIClient
+from app.clients.user_profile_client import get_user_data, feature_enabled
+from app.db import get_db_conn
+from app.logger import LOGGER
+from app.settings import Settings
 
 settings = Settings()
-secret = Secret()
-
-
-async def get_db_conn():
-    return await asyncpg.connect(
-        host=settings.PGHOST,
-        port=settings.PGPORT,
-        database=settings.PGDATABASE,
-        user=settings.PGUSER,
-        password=str(secret.PGPASSWORD)
-    )
-
-
-async def get_user_data(app_id: str, auth_token: str) -> dict:
-    '''
-    get user bio and reference area from UPS
-    '''
-    headers = {
-        'Authorization': auth_token,
-        'User-Agent': settings.USER_AGENT,
-    }
-    async with ClientSession(headers=headers) as session:
-        url = settings.USER_PROFILE_API_URL + '/users/current_user'
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                raise HTTPException(status_code=resp.status, detail=await resp.text())
-            user_data = await resp.json()
-
-        url = settings.USER_PROFILE_API_URL + '/apps/' + app_id
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                raise HTTPException(status_code=resp.status, detail=await resp.text())
-            app_config = await resp.json()
-
-        url = settings.USER_PROFILE_API_URL + '/features?appId=' + app_id
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                raise HTTPException(status_code=resp.status, detail=await resp.text())
-            features = await resp.json()
-            if len([x for x in features if x['name'] == 'llm_analytics']) == 0:
-                raise HTTPException(status_code=403, detail='llm_analytics is not enabled for the user')
-
-    reference_area = app_config['featuresConfig'].get('reference_area')
-    user_data['reference_area'] = reference_area
-    return user_data
 
 
 async def get_llm_response_from_cache(conn, cache_key, llm_model):
@@ -87,12 +42,13 @@ async def llm_analytics(request: 'Request') -> 'Response':
     if not (selected_area_geojson := data.get('features')):
         raise HTTPException(status_code=400, detail='missing features')
 
-    LOGGER.debug(f'asking UPS {settings.USER_PROFILE_API_URL} for user data..')
-    user_data = await get_user_data(app_id, auth_token=request.headers.get('Authorization') or '')
-    bio = user_data.get('bio')
-    reference_area = user_data.get('reference_area') or {}
+    user_data = await get_user_data(app_id, auth_token=request.headers.get('Authorization'), features_config=True)
+    if not feature_enabled('llm_analytics', user_data):
+        raise HTTPException(status_code=403, detail='llm_analytics is not enabled for the user')
+
+    bio = user_data['current_user'].get('bio')
+    reference_area = user_data['features_config'].get('reference_area') or {}
     reference_area_geojson = reference_area.get('referenceAreaGeometry') or {}
-    LOGGER.debug('got user data')
     LOGGER.debug('user bio: %s', bio)
 
     LOGGER.debug(f'asking insights-api {settings.INSIGHTS_API_URL} for advanced analytics..')

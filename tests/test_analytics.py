@@ -1,6 +1,6 @@
 import unittest
 
-from app.insights_api_client import to_readable_sentence, unit_to_str
+from app.clients.insights_api_client import to_readable_sentence, unit_to_str
 
 
 class TestAnalytics(unittest.TestCase):

@@ -7,7 +7,7 @@ from starlette.routing import Route
 
 from .settings import Settings
 from .secret import Secret
-from .llm_analytics import llm_analytics
+from .views import llm_analytics, search
 
 
 settings = Settings()
@@ -30,6 +30,7 @@ async def health(request: 'Request') -> 'Response':
 
 routes = [
     Route("/llm-analytics", methods=['POST'], endpoint=llm_analytics),
+    Route("/search", methods=['GET'], endpoint=search),
     Route("/health", endpoint=health),
 ]
 
