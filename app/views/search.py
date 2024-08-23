@@ -15,7 +15,7 @@ settings = Settings()
 secret = Secret()
 
 
-async def get_nominatim_response_from_cache(conn, query: str) -> dict:
+async def get_nominatim_response_from_cache(conn, query: str) -> dict | None:
     return await conn.fetchval(
         'select response from nominatim_cache where query = $1 and response is not null',
         query)
