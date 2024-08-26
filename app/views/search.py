@@ -1,3 +1,4 @@
+import hashlib
 import ujson as json
 
 import asyncpg
@@ -15,10 +16,10 @@ settings = Settings()
 secret = Secret()
 
 
-async def get_nominatim_response_from_cache(conn, query: str) -> dict | None:
+async def get_nominatim_response_from_cache(conn, cache_key: str) -> dict | None:
     return await conn.fetchval(
-        'select response from nominatim_cache where query = $1 and response is not null',
-        query)
+        'select response from nominatim_cache where query_hash = $1 and response is not null',
+        cache_key)
 
 
 async def search_locations(query: str, lang: str) -> dict:
@@ -29,6 +30,8 @@ async def search_locations(query: str, lang: str) -> dict:
     url = f'search?q={query}&format=geojson&polygon_geojson=1'
     if lang:
         url += f'&accept-language={lang}'
+    cache_key = hashlib.md5(url.encode("utf-8")).hexdigest()
+
     conn = await get_db_conn()
     await conn.set_type_codec(
         'jsonb',
@@ -36,7 +39,7 @@ async def search_locations(query: str, lang: str) -> dict:
         decoder=json.loads,
         schema='pg_catalog',
     )
-    if result := await get_nominatim_response_from_cache(conn, url):
+    if result := await get_nominatim_response_from_cache(conn, cache_key):
         await conn.close()
         LOGGER.debug('found response in cache')
         return result
@@ -45,14 +48,14 @@ async def search_locations(query: str, lang: str) -> dict:
     await tr.start()
     try:
         await conn.execute(
-            'insert into nominatim_cache (query, response) values ($1, $2)',
-            url, None,
+            'insert into nominatim_cache (query_hash, query, response) values ($1, $2, $3)',
+            cache_key, url, None,
         )
     except asyncpg.exceptions.UniqueViolationError:
         # other transaction saved nominatim response first, return it
         await tr.rollback()
         LOGGER.debug('return nominatim response committed by other transaction')
-        result = await get_nominatim_response_from_cache(conn, url)
+        result = await get_nominatim_response_from_cache(conn, cache_key)
         await conn.close()
         return result
 
@@ -60,8 +63,8 @@ async def search_locations(query: str, lang: str) -> dict:
         async with session.get('https://nominatim.openstreetmap.org/' + url) as response:
             nominatim_response = await response.json()
     await conn.execute(
-        'update nominatim_cache set response = $1 where query = $2',
-        nominatim_response, url,
+        'update nominatim_cache set response = $1 where query_hash = $2',
+        nominatim_response, cache_key,
     )
     await tr.commit()
     await conn.close()
