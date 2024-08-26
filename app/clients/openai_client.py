@@ -4,9 +4,9 @@ import re
 from openai import AsyncOpenAI
 from starlette.exceptions import HTTPException
 
-from .secret import Secret
-from .settings import Settings
-from .logger import LOGGER
+from app.secret import Secret
+from app.settings import Settings
+from app.logger import LOGGER
 
 secret = Secret()
 settings = Settings()

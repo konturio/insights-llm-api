@@ -4,8 +4,8 @@ import ujson as json
 from starlette.exceptions import HTTPException
 from aiohttp import ClientSession
 
-from .settings import Settings
-from .logger import LOGGER
+from app.settings import Settings
+from app.logger import LOGGER
 
 settings = Settings()
 
