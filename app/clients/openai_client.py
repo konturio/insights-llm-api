@@ -110,7 +110,10 @@ def get_properties(geojson: dict) -> str:
     # remove duplicated and empty props
     deduplicated_properties = set(str(prop) for prop in properties if prop)
     props_str = ', '.join(deduplicated_properties) or 'not available'
-    # Construct and return the result string with all unique, deduplicated properties
+    max_properties_length = 2000
+    if len(props_str) > max_properties_length:
+        props_str = props_str[:max_properties_length] + '...'
+    # Construct and return the result string with all unique and truncated properties
     return f'(input GeoJSON properties: {props_str})'
 
 
