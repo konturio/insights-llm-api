@@ -16,7 +16,7 @@ async def save_search_choice(request: 'Request') -> 'Response':
     Request format:
         - 'appId' (str): UUID of client application
         - 'query' (str): user query
-        - 'searchResults' (dict[str, FeatureCollection]): search results
+        - 'searchResults' (list[tuple[str, FeatureCollection]]): search results
         - 'selectedFeature' (Feature): user choice
         - 'selectedFeatureType' (str): locations | layers | indicators | ...
     '''
