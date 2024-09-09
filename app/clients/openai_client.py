@@ -1,15 +1,16 @@
 import asyncio
+import hashlib
 import re
 
+import asyncpg
 from openai import AsyncOpenAI
 from starlette.exceptions import HTTPException
 
 from app.secret import Secret
-from app.settings import Settings
 from app.logger import LOGGER
+from app.db import get_db_conn
 
 secret = Secret()
-settings = Settings()  ## TODO remove
 
 
 class OpenAIClient:
@@ -36,6 +37,51 @@ class OpenAIClient:
     async def model(self):
         assistant = await self.assistant
         return assistant.model
+
+    async def get_llm_response_from_cache(self, conn, cache_key, llm_model):
+        return await conn.fetchval(
+            'select response from llm_cache where hash = $1 and model_name = $2 and response is not null',
+            cache_key, llm_model)
+
+    async def get_cached_llm_commentary(self, prompt: str) -> str:
+        to_cache = f'instructions: {self.instructions}; prompt: {prompt}'
+        LOGGER.debug('\n'.join(prompt.split(';')).replace('"', '\\"'))
+        cache_key = hashlib.md5(to_cache.encode("utf-8")).hexdigest()
+        llm_model = await self.model
+
+        conn = await get_db_conn()
+        if result := await self.get_llm_response_from_cache(conn, cache_key, llm_model):
+            await conn.close()
+            LOGGER.debug('found LLM response for %s model in the cache', llm_model)
+            return result
+
+        tr = conn.transaction()
+        await tr.start()
+        try:
+            # two equal queries will block, the second will fail with duplicate key error
+            await conn.execute(
+                'insert into llm_cache (hash, request, response, model_name) values ($1, $2, $3, $4)',
+                cache_key, to_cache, None, llm_model,
+            )
+        except asyncpg.exceptions.UniqueViolationError:
+            # other transaction saved an LLM response first, return it
+            await tr.rollback()
+            LOGGER.debug('return response committed by other transaction')
+            result = await self.get_llm_response_from_cache(conn, cache_key, llm_model)
+            await conn.close()
+            return result
+
+        LOGGER.debug('asking LLM for commentary..')
+        llm_response = await self.get_llm_commentary(prompt)
+        await conn.execute(
+            'update llm_cache set response = $1 where hash = $2 and model_name = $3',
+            llm_response, cache_key, llm_model,
+        )
+        await tr.commit()
+        await conn.close()
+        LOGGER.debug('saved LLM response for hash = %s and model_name = %s', cache_key, llm_model)
+        return llm_response
+
 
     async def get_llm_commentary(self, prompt: str) -> str:
         '''
@@ -98,6 +144,7 @@ class OpenAIClient:
 
 
 def get_properties(geojson: dict) -> str:
+    '''parse input geojson for 'properties', deduplicate, concatenate, truncate and return'''
     properties = []
 
     def extract_properties(gj: dict) -> list:
@@ -127,7 +174,7 @@ def get_properties(geojson: dict) -> str:
     return f'(input GeoJSON properties: {props_str})'
 
 
-def get_llm_prompt(
+def get_analytics_prompt(
         sentences: list[str],
         indicator_description: str,
         bio: str,
@@ -135,6 +182,7 @@ def get_llm_prompt(
         selected_area_geojson: dict,
         reference_area_geojson: dict,
 ) -> str:
+    '''compose prompt to recieve analytics for provided axes'''
     reference_area_props = get_properties(reference_area_geojson)
     selected_area_props = get_properties(selected_area_geojson)
     LOGGER.debug('reference_area geom is %s', 'not empty' if reference_area_geojson else 'empty')
