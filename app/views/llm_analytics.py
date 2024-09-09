@@ -57,12 +57,15 @@ async def llm_analytics(request: 'Request') -> 'Response':
     # build cache key from request and check if it's in llm_cache table
     lang = request.headers.get('User-Language')
     llm_request = get_llm_prompt(sentences, indicator_description, bio, lang, selected_area_geojson, reference_area_geojson)
-    llm_instructions = settings.OPENAI_INSTRUCTIONS
+    llm_instructions = settings.OPENAI_ANALYTICS_INSTRUCTIONS
     to_cache = f'instructions: {llm_instructions}; prompt: {llm_request}'
     LOGGER.debug('\n'.join(llm_request.split(';')).replace('"', '\\"'))
     cache_key = hashlib.md5(to_cache.encode("utf-8")).hexdigest()
 
-    openai_client = OpenAIClient()
+    openai_client = OpenAIClient(
+        assistant_name=settings.OPENAI_ANALYTICS_ASSISTANT,
+        instructions=settings.OPENAI_ANALYTICS_INSTRUCTIONS,
+        override_instructions=True)
     llm_model = await openai_client.model
 
     conn = await get_db_conn()

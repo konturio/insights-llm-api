@@ -9,13 +9,16 @@ from app.settings import Settings
 from app.logger import LOGGER
 
 secret = Secret()
-settings = Settings()
+settings = Settings()  ## TODO remove
 
 
 class OpenAIClient:
 
-    def __init__(self):
+    def __init__(self, assistant_name, instructions=None, override_instructions=False):
         self.client = AsyncOpenAI(api_key=secret.OPENAI_API_KEY, timeout=40.0)
+        self.assistant_name = assistant_name
+        self.instructions = instructions
+        self.override_instructions = override_instructions
         self._assistant = None
         self._model = None
 
@@ -24,8 +27,8 @@ class OpenAIClient:
         if self._assistant:
             return self._assistant
 
-        LOGGER.debug('looking for %s assistant..', settings.OPENAI_ASSISTANT)
-        self._assistant = [i async for i in self.client.beta.assistants.list() if i.name == settings.OPENAI_ASSISTANT][0]
+        LOGGER.debug('looking for %s assistant..', self.assistant_name)
+        self._assistant = [i async for i in self.client.beta.assistants.list() if i.name == self.assistant_name][0]
         LOGGER.debug('chatGPT model: %s', self._assistant.model)
         return self._assistant
 
@@ -58,12 +61,19 @@ class OpenAIClient:
 
         # assistant has it's own instructions, but we're able to override them per-run
         assistant = await self.assistant
-        LOGGER.debug('chatGPT instructions: %s', settings.OPENAI_INSTRUCTIONS)
-        run = await self.client.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=assistant.id,
-            instructions=settings.OPENAI_INSTRUCTIONS,
-        )
+        LOGGER.debug('chatGPT instructions: %s', self.instructions)
+        if self.override_instructions:
+            run = await self.client.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id=assistant.id,
+                instructions=self.instructions,
+            )
+        else:
+            run = await self.client.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id=assistant.id,
+                additional_instructions=self.instructions,
+            )
 
         while not run.status == "completed":
             await asyncio.sleep(1)
