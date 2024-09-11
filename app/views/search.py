@@ -1,4 +1,3 @@
-from urllib.parse import quote
 import hashlib
 import ujson as json
 

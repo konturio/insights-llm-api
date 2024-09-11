@@ -121,13 +121,15 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
     return to_readable_sentence(sorted_calculations, calculations_world, calculations_reference_area), descriptions_txt
 
 
-async def query_insights_api(session: ClientSession, graphql: str, geojson=None) -> dict:
+async def query_insights_api(session: ClientSession, query: str, geojson=None) -> dict:
     '''
     send graphql query to insights-api service for provided geojson
     '''
-    geojson = json.dumps(geojson) if geojson else '{"type":"FeatureCollection","features":[]}'
-    query = graphql % geojson.replace('\\', '\\\\').replace('"','\\"')
-    #LOGGER.debug(query)
+    if '%s' in query:
+        # that means query requires polygon as parameter
+        geojson = json.dumps(geojson) if geojson else '{"type":"FeatureCollection","features":[]}'
+        query = query.format(polygon=geojson.replace('\\', '\\\\').replace('"','\\"'))
+        #LOGGER.debug(query)
     async with session.post(settings.INSIGHTS_API_URL, json={'query': query}) as resp:
         if resp.status != 200:
             raise HTTPException(status_code=resp.status)
