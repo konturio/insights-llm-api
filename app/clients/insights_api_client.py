@@ -40,6 +40,29 @@ advanced_analytics_graphql = """
 }
 """
 
+axis_graphql = """
+{
+  getAxes {
+    axis {
+      label,
+      datasetStats {minValue, maxValue, mean, stddev},
+      quality,
+      quotients {name, label, emoji, description, unit{longName}}
+    }
+  }
+}
+"""
+
+
+async def get_axes() -> str:
+    headers = {
+        'User-Agent': settings.USER_AGENT,
+    }
+    async with ClientSession(headers=headers) as session:
+        axes = await query_insights_api(session, axis_graphql)
+        LOGGER.debug('got axes')
+        return axes
+
 
 def get_analytics_resolution(data: dict) -> int:
     '''
