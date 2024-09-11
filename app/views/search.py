@@ -94,6 +94,9 @@ async def search(request: 'Request') -> 'Response':
 
     user_data = await get_user_data(app_id, auth_token=request.headers.get('Authorization'))
     if feature_enabled('search_locations', user_data):
-        search_results['locations'] = await search_locations(query, lang)
+        locations = await search_locations(query, lang)
+        for feature in locations['features']:
+            feature['properties']['bbox'] = feature['bbox']
+        search_results['locations'] = locations
 
     return JSONResponse(search_results)
