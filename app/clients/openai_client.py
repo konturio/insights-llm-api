@@ -44,10 +44,6 @@ class OpenAIClient:
             cache_key, llm_model)
 
     async def get_cached_llm_commentary(self, prompt: str) -> str:
-        import time
-        timestamp = int(time.time())
-        with open(f'prompt_tmp_{timestamp}.txt', 'w') as f:
-            f.write(prompt)
         to_cache = f'instructions: {self.instructions}; prompt: {prompt}'
         LOGGER.debug('\n'.join(prompt.split(';')).replace('"', '\\"'))
         cache_key = hashlib.md5(to_cache.encode("utf-8")).hexdigest()

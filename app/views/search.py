@@ -11,7 +11,6 @@ from app.db import get_db_conn
 from app.logger import LOGGER
 from app.secret import Secret
 from app.settings import Settings
-from app.mcda import get_mcda_suggestion
 
 settings = Settings()
 secret = Secret()
@@ -99,8 +98,5 @@ async def search(request: 'Request') -> 'Response':
         for feature in locations['features']:
             feature['properties']['bbox'] = feature['bbox']
         search_results['locations'] = locations
-    if feature_enabled('llm_mcda', user_data):
-        bio = user_data['current_user'].get('bio')
-        search_results['llm_mcda'] = await get_mcda_suggestion(query, bio)
 
     return JSONResponse(search_results)

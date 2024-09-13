@@ -11,7 +11,7 @@ solar_farms_example = '''{
                 "label": "Global Horizontal Irradiance"
             },
             "denominator": {
-                "label": "1"
+                "name": "one"
             },
             "sentiment": [
                 "bad",
@@ -28,7 +28,7 @@ solar_farms_example = '''{
                 "label": "Forest landcover"
             },
             "denominator": {
-                "label": "Area"
+                "name": "area_km2"
             },
             "sentiment": [
                 "good",
@@ -45,7 +45,7 @@ solar_farms_example = '''{
                 "label": "All disaster types exposure"
             },
             "denominator": {
-                "label": "1"
+                "name": "one"
             },
             "sentiment": [
                 "good",
@@ -62,7 +62,7 @@ solar_farms_example = '''{
                 "label": "Proximity to power substations"
             },
             "denominator": {
-                "label": "1"
+                "name": "one"
             },
             "sentiment": [
                 "good",
@@ -79,7 +79,7 @@ solar_farms_example = '''{
                 "label": "Slope"
             },
             "denominator": {
-                "label": "1"
+                "name": "one"
             },
             "sentiment": [
                 "good",
@@ -96,7 +96,7 @@ solar_farms_example = '''{
                 "label": "Days above 32°C (+1°C scenario)"
             },
             "denominator": {
-                "label": "1"
+                "name": "one"
             },
             "sentiment": [
                 "good",
@@ -113,7 +113,7 @@ solar_farms_example = '''{
                 "label": "Proximity to densely populated areas"
             },
             "denominator": {
-                "label": "1"
+                "name": "one"
             },
             "sentiment": [
                 "good",
@@ -130,7 +130,7 @@ solar_farms_example = '''{
                 "label": "Proximity to powerlines"
             },
             "denominator": {
-                "label": "1"
+                "name": "one"
             },
             "sentiment": [
                 "good",

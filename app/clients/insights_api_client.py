@@ -42,14 +42,40 @@ advanced_analytics_graphql = """
 
 axis_graphql = """
 {
-  getAxes {
-    axis {
-      label,
-      datasetStats {minValue, maxValue, mean, stddev},
-      quality,
-      quotients {name, label, emoji, description, unit{longName}}
+    getAxes {
+        axis{
+            label
+            datasetStats{
+                minValue,
+                maxValue,
+                mean,
+                stddev
+            }
+            quality
+            quotients {
+                name
+                label
+                emoji
+                description
+                copyrights
+                direction
+                unit {
+                    id
+                    shortName
+                    longName
+                }
+            }
+            transformation {
+                transformation
+                min
+                mean
+                stddev
+                lowerBound
+                upperBound
+                skew
+            }
+        }
     }
-  }
 }
 """
 
