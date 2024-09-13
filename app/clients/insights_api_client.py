@@ -40,6 +40,55 @@ advanced_analytics_graphql = """
 }
 """
 
+axis_graphql = """
+{
+    getAxes {
+        axis{
+            label
+            datasetStats{
+                minValue,
+                maxValue,
+                mean,
+                stddev
+            }
+            quality
+            quotients {
+                name
+                label
+                emoji
+                description
+                copyrights
+                direction
+                unit {
+                    id
+                    shortName
+                    longName
+                }
+            }
+            transformation {
+                transformation
+                min
+                mean
+                stddev
+                lowerBound
+                upperBound
+                skew
+            }
+        }
+    }
+}
+"""
+
+
+async def get_axes() -> str:
+    headers = {
+        'User-Agent': settings.USER_AGENT,
+    }
+    async with ClientSession(headers=headers) as session:
+        axes = await query_insights_api(session, axis_graphql)
+        LOGGER.debug('got axes')
+        return axes
+
 
 def get_analytics_resolution(data: dict) -> int:
     '''
@@ -98,13 +147,15 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
     return to_readable_sentence(sorted_calculations, calculations_world, calculations_reference_area), descriptions_txt
 
 
-async def query_insights_api(session: ClientSession, graphql: str, geojson=None) -> dict:
+async def query_insights_api(session: ClientSession, query: str, geojson=None) -> dict:
     '''
     send graphql query to insights-api service for provided geojson
     '''
-    geojson = json.dumps(geojson) if geojson else '{"type":"FeatureCollection","features":[]}'
-    query = graphql % geojson.replace('\\', '\\\\').replace('"','\\"')
-    #LOGGER.debug(query)
+    if '%s' in query:
+        # that means query requires polygon as parameter
+        geojson = json.dumps(geojson) if geojson else '{"type":"FeatureCollection","features":[]}'
+        query = query.format(polygon=geojson.replace('\\', '\\\\').replace('"','\\"'))
+        #LOGGER.debug(query)
     async with session.post(settings.INSIGHTS_API_URL, json={'query': query}) as resp:
         if resp.status != 200:
             raise HTTPException(status_code=resp.status)

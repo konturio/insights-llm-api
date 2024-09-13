@@ -1,21 +1,25 @@
 import asyncio
+import hashlib
 import re
 
+import asyncpg
 from openai import AsyncOpenAI
 from starlette.exceptions import HTTPException
 
 from app.secret import Secret
-from app.settings import Settings
 from app.logger import LOGGER
+from app.db import get_db_conn
 
 secret = Secret()
-settings = Settings()
 
 
 class OpenAIClient:
 
-    def __init__(self):
+    def __init__(self, assistant_name, instructions=None, override_instructions=False):
         self.client = AsyncOpenAI(api_key=secret.OPENAI_API_KEY, timeout=40.0)
+        self.assistant_name = assistant_name
+        self.instructions = instructions
+        self.override_instructions = override_instructions
         self._assistant = None
         self._model = None
 
@@ -24,8 +28,8 @@ class OpenAIClient:
         if self._assistant:
             return self._assistant
 
-        LOGGER.debug('looking for %s assistant..', settings.OPENAI_ASSISTANT)
-        self._assistant = [i async for i in self.client.beta.assistants.list() if i.name == settings.OPENAI_ASSISTANT][0]
+        LOGGER.debug('looking for %s assistant..', self.assistant_name)
+        self._assistant = [i async for i in self.client.beta.assistants.list() if i.name == self.assistant_name][0]
         LOGGER.debug('chatGPT model: %s', self._assistant.model)
         return self._assistant
 
@@ -33,6 +37,51 @@ class OpenAIClient:
     async def model(self):
         assistant = await self.assistant
         return assistant.model
+
+    async def get_llm_response_from_cache(self, conn, cache_key, llm_model):
+        return await conn.fetchval(
+            'select response from llm_cache where hash = $1 and model_name = $2 and response is not null',
+            cache_key, llm_model)
+
+    async def get_cached_llm_commentary(self, prompt: str) -> str:
+        to_cache = f'instructions: {self.instructions}; prompt: {prompt}'
+        LOGGER.debug('\n'.join(prompt.split(';')).replace('"', '\\"'))
+        cache_key = hashlib.md5(to_cache.encode("utf-8")).hexdigest()
+        llm_model = await self.model
+
+        conn = await get_db_conn()
+        if result := await self.get_llm_response_from_cache(conn, cache_key, llm_model):
+            await conn.close()
+            LOGGER.debug('found LLM response for %s model in the cache', llm_model)
+            return result
+
+        tr = conn.transaction()
+        await tr.start()
+        try:
+            # two equal queries will block, the second will fail with duplicate key error
+            await conn.execute(
+                'insert into llm_cache (hash, request, response, model_name) values ($1, $2, $3, $4)',
+                cache_key, to_cache, None, llm_model,
+            )
+        except asyncpg.exceptions.UniqueViolationError:
+            # other transaction saved an LLM response first, return it
+            await tr.rollback()
+            LOGGER.debug('return response committed by other transaction')
+            result = await self.get_llm_response_from_cache(conn, cache_key, llm_model)
+            await conn.close()
+            return result
+
+        LOGGER.debug('asking LLM for commentary..')
+        llm_response = await self.get_llm_commentary(prompt)
+        await conn.execute(
+            'update llm_cache set response = $1 where hash = $2 and model_name = $3',
+            llm_response, cache_key, llm_model,
+        )
+        await tr.commit()
+        await conn.close()
+        LOGGER.debug('saved LLM response for hash = %s and model_name = %s', cache_key, llm_model)
+        return llm_response
+
 
     async def get_llm_commentary(self, prompt: str) -> str:
         '''
@@ -58,12 +107,19 @@ class OpenAIClient:
 
         # assistant has it's own instructions, but we're able to override them per-run
         assistant = await self.assistant
-        LOGGER.debug('chatGPT instructions: %s', settings.OPENAI_INSTRUCTIONS)
-        run = await self.client.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=assistant.id,
-            instructions=settings.OPENAI_INSTRUCTIONS,
-        )
+        LOGGER.debug('chatGPT instructions: %s', self.instructions)
+        if self.override_instructions:
+            run = await self.client.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id=assistant.id,
+                instructions=self.instructions,
+            )
+        else:
+            run = await self.client.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id=assistant.id,
+                additional_instructions=self.instructions,
+            )
 
         while not run.status == "completed":
             await asyncio.sleep(1)
@@ -83,11 +139,14 @@ class OpenAIClient:
         for _, message in messages:
             message_text = message[0].content[0].text.value
             break
+        LOGGER.info('completed assistant_id %s, thread_id %s, run_id %s', assistant.id, thread.id, run.id)
+        LOGGER.debug('https://platform.openai.com/playground/assistants?assistant=%s&thread=%s', assistant.id, thread.id)
 
         return message_text
 
 
 def get_properties(geojson: dict) -> str:
+    '''parse input geojson for 'properties', deduplicate, concatenate, truncate and return'''
     properties = []
 
     def extract_properties(gj: dict) -> list:
@@ -117,7 +176,7 @@ def get_properties(geojson: dict) -> str:
     return f'(input GeoJSON properties: {props_str})'
 
 
-def get_llm_prompt(
+def get_analytics_prompt(
         sentences: list[str],
         indicator_description: str,
         bio: str,
@@ -125,6 +184,7 @@ def get_llm_prompt(
         selected_area_geojson: dict,
         reference_area_geojson: dict,
 ) -> str:
+    '''compose prompt to recieve analytics for provided axes'''
     reference_area_props = get_properties(reference_area_geojson)
     selected_area_props = get_properties(selected_area_geojson)
     LOGGER.debug('reference_area geom is %s', 'not empty' if reference_area_geojson else 'empty')

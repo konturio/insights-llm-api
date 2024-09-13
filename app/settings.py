@@ -21,10 +21,12 @@ class Settings:
     PGUSER: str = None
 
     USER_AGENT: str = 'insights-llm-api'
-    OPENAI_INSTRUCTIONS: str = None
+    OPENAI_ANALYTICS_INSTRUCTIONS: str = None
     # how many analytics sentences we want to include into prompt:
     MAX_ANALYTICS_SENTENCES: int = 400
-    OPENAI_ASSISTANT: str = None
+    OPENAI_ANALYTICS_ASSISTANT: str = None
+    OPENAI_MCDA_ASSISTANT: str = None
+    OPENAI_MCDA_INSTRUCTIONS: str = None
 
     @property
     def LOG_CONFIG(self):

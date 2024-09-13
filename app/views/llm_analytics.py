@@ -1,24 +1,15 @@
-import hashlib
 from json.decoder import JSONDecodeError
 
-import asyncpg
 from starlette.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from app.clients.insights_api_client import get_analytics_sentences
-from app.clients.openai_client import get_llm_prompt, OpenAIClient
+from app.clients.openai_client import get_analytics_prompt, OpenAIClient
 from app.clients.user_profile_client import get_user_data, feature_enabled
-from app.db import get_db_conn
 from app.logger import LOGGER
 from app.settings import Settings
 
 settings = Settings()
-
-
-async def get_llm_response_from_cache(conn, cache_key, llm_model):
-    return await conn.fetchval(
-        'select response from llm_cache where hash = $1 and model_name = $2 and response is not null',
-        cache_key, llm_model)
 
 
 async def llm_analytics(request: 'Request') -> 'Response':
@@ -56,44 +47,10 @@ async def llm_analytics(request: 'Request') -> 'Response':
 
     # build cache key from request and check if it's in llm_cache table
     lang = request.headers.get('User-Language')
-    llm_request = get_llm_prompt(sentences, indicator_description, bio, lang, selected_area_geojson, reference_area_geojson)
-    llm_instructions = settings.OPENAI_INSTRUCTIONS
-    to_cache = f'instructions: {llm_instructions}; prompt: {llm_request}'
-    LOGGER.debug('\n'.join(llm_request.split(';')).replace('"', '\\"'))
-    cache_key = hashlib.md5(to_cache.encode("utf-8")).hexdigest()
-
-    openai_client = OpenAIClient()
-    llm_model = await openai_client.model
-
-    conn = await get_db_conn()
-    if result := await get_llm_response_from_cache(conn, cache_key, llm_model):
-        await conn.close()
-        LOGGER.debug('found LLM response for %s model in the cache', llm_model)
-        return JSONResponse({'data': result})
-
-    tr = conn.transaction()
-    await tr.start()
-    try:
-        # two equal queries will block, the second will fail with duplicate key error
-        await conn.execute(
-            'insert into llm_cache (hash, request, response, model_name) values ($1, $2, $3, $4)',
-            cache_key, to_cache, None, llm_model,
-        )
-    except asyncpg.exceptions.UniqueViolationError:
-        # other transaction saved an LLM response first, return it
-        await tr.rollback()
-        LOGGER.debug('return response committed by other transaction')
-        result = await get_llm_response_from_cache(conn, cache_key, llm_model)
-        await conn.close()
-        return JSONResponse({'data': result})
-
-    LOGGER.debug('asking LLM for commentary..')
-    llm_response = await openai_client.get_llm_commentary(llm_request)
-    await conn.execute(
-        'update llm_cache set response = $1 where hash = $2 and model_name = $3',
-        llm_response, cache_key, llm_model,
-    )
-    await tr.commit()
-    await conn.close()
-    LOGGER.debug('saved LLM response for hash = %s and model_name = %s', cache_key, llm_model)
+    prompt = get_analytics_prompt(sentences, indicator_description, bio, lang, selected_area_geojson, reference_area_geojson)
+    openai_client = OpenAIClient(
+        assistant_name=settings.OPENAI_ANALYTICS_ASSISTANT,
+        instructions=settings.OPENAI_ANALYTICS_INSTRUCTIONS,
+        override_instructions=True)
+    llm_response = await openai_client.get_cached_llm_commentary(prompt)
     return JSONResponse({'data': llm_response})
