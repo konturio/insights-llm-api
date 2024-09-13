@@ -17,8 +17,10 @@ async def get_mcda_suggestion(query, bio) -> dict:
         if not axis['label']:
             set_axis_label(axis)
     prompt = await get_mcda_prompt(query, bio, axis_data)
-    # TODO: add instructions from dashboard to repo, so they're included in cache key
-    openai_client = OpenAIClient(assistant_name=settings.OPENAI_MCDA_ASSISTANT)
+    openai_client = OpenAIClient(
+        assistant_name=settings.OPENAI_MCDA_ASSISTANT,
+        instructions=settings.OPENAI_MCDA_INSTRUCTIONS,
+        override_instructions=True)
     llm_response = await openai_client.get_cached_llm_commentary(prompt)
     return make_valid_mcda(llm_response, axis_data)
 

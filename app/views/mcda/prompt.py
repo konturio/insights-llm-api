@@ -13,6 +13,11 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         Response:
             {solar_farms_example}
 
+        Make sure you also add sentiments to the indicator.
+        Sentiments can be either ["good", "bad"] (lower value is good for analysis and higher value is bad) or ["bad","good"] (higher value is goof for analysis and lower is bad).
+        Example: is high population density is better than low for current analysis? set ["bad","good"].
+        With this sentiment areas with higher population will get lower score than areas with low population.
+
         The user's request is: "{user_query}".
         When responding, you may paraphrase this request to be more descriptive and contextual if needed. This bill be displayed on UI as a label for your analysis you provide.
         Use the user's bio: "{user_bio}" to personalize the analysis and add contextual insights that might enhance the analysis. Focus on the request "{user_query}", do not shift the main focus away from it and leverage bio details only if applicable. 

@@ -26,6 +26,7 @@ class Settings:
     MAX_ANALYTICS_SENTENCES: int = 400
     OPENAI_ANALYTICS_ASSISTANT: str = None
     OPENAI_MCDA_ASSISTANT: str = None
+    OPENAI_MCDA_INSTRUCTIONS: str = None
 
     @property
     def LOG_CONFIG(self):
