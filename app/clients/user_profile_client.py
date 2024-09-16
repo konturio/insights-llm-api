@@ -7,13 +7,14 @@ from app.settings import Settings
 settings = Settings()
 
 
-def feature_enabled(feature, user_data) -> bool:
-    return feature in user_data['features_enabled']
+def feature_enabled(feature, app_data) -> bool:
+    return feature in app_data['features_enabled']
 
 
-async def get_user_data(app_id: str, auth_token: str, features_config=False) -> dict:
+async def get_app_data(app_id: str, auth_token: str, user_data=True, features_config=False) -> dict:
     '''
     get info about user and app features from UPS.
+    user_data flag indicates if it's necessary to retrieve info about authorized user.
     features_config flag indicates if it's necessary to request app configuration
     '''
     headers = {
@@ -23,11 +24,12 @@ async def get_user_data(app_id: str, auth_token: str, features_config=False) -> 
     result = {}
     LOGGER.debug(f'asking UPS {settings.USER_PROFILE_API_URL} for user data..')
     async with ClientSession(headers=headers) as session:
-        url = settings.USER_PROFILE_API_URL + '/users/current_user'
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                raise HTTPException(status_code=resp.status, detail=await resp.text())
-            result['current_user'] = await resp.json()
+        if user_data:
+            url = settings.USER_PROFILE_API_URL + '/users/current_user'
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    raise HTTPException(status_code=resp.status, detail=await resp.text())
+                result['current_user'] = await resp.json()
 
         if features_config:
             url = settings.USER_PROFILE_API_URL + '/apps/' + app_id

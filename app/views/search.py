@@ -6,7 +6,7 @@ from aiohttp import ClientSession
 from starlette.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from app.clients.user_profile_client import get_user_data, feature_enabled
+from app.clients.user_profile_client import get_app_data, feature_enabled
 from app.db import get_db_conn
 from app.logger import LOGGER
 from app.secret import Secret
@@ -92,8 +92,8 @@ async def search(request: 'Request') -> 'Response':
     lang = request.headers.get('User-Language')
     search_results = {}
 
-    user_data = await get_user_data(app_id, auth_token=request.headers.get('Authorization'))
-    if feature_enabled('search_locations', user_data):
+    app_data = await get_app_data(app_id, auth_token=request.headers.get('Authorization'), user_data=False)
+    if feature_enabled('search_locations', app_data):
         locations = await search_locations(query, lang)
         for feature in locations['features']:
             feature['properties']['bbox'] = feature['bbox']
