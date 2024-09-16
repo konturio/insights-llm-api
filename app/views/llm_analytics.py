@@ -5,7 +5,7 @@ from starlette.exceptions import HTTPException
 
 from app.clients.insights_api_client import get_analytics_sentences
 from app.clients.openai_client import get_analytics_prompt, OpenAIClient
-from app.clients.user_profile_client import get_user_data, feature_enabled
+from app.clients.user_profile_client import get_app_data, feature_enabled
 from app.logger import LOGGER
 from app.settings import Settings
 
@@ -33,12 +33,12 @@ async def llm_analytics(request: 'Request') -> 'Response':
     if not (selected_area_geojson := data.get('features')):
         raise HTTPException(status_code=400, detail='missing features')
 
-    user_data = await get_user_data(app_id, auth_token=request.headers.get('Authorization'), features_config=True)
-    if not feature_enabled('llm_analytics', user_data):
+    app_data = await get_app_data(app_id, auth_token=request.headers.get('Authorization'), features_config=True)
+    if not feature_enabled('llm_analytics', app_data):
         raise HTTPException(status_code=403, detail='llm_analytics is not enabled for the user')
 
-    bio = user_data['current_user'].get('bio')
-    reference_area = user_data['features_config'].get('reference_area') or {}
+    bio = app_data['current_user'].get('bio')
+    reference_area = app_data['features_config'].get('reference_area') or {}
     reference_area_geojson = reference_area.get('referenceAreaGeometry') or {}
     LOGGER.debug('user bio: %s', bio)
 
