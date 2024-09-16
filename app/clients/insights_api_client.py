@@ -154,7 +154,7 @@ async def query_insights_api(session: ClientSession, query: str, geojson=None) -
     if '%s' in query:
         # that means query requires polygon as parameter
         geojson = json.dumps(geojson) if geojson else '{"type":"FeatureCollection","features":[]}'
-        query = query.format(polygon=geojson.replace('\\', '\\\\').replace('"','\\"'))
+        query = query % geojson.replace('\\', '\\\\').replace('"','\\"')
         #LOGGER.debug(query)
     async with session.post(settings.INSIGHTS_API_URL, json={'query': query}) as resp:
         if resp.status != 200:
