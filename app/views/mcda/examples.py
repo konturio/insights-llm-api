@@ -1,5 +1,6 @@
 solar_farms_example = '''{
-    "request": "Best place to put solar farms",
+    "original_request": "Best place to put solar farms",
+    "analysis_name": "Best place to put solar farms",
     "axes": [
         {
             "comment": "Solar farms require sunlight",
@@ -13,6 +14,7 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
+            "sentiment_hint": "More sunlight = better performance = good, less sunlight = bad. Set bad->good sentiment",
             "sentiment": [
                 "bad",
                 "good"
@@ -30,6 +32,7 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "area_km2"
             },
+            "sentiment_hint": "Places with no or less forest are better for solar farms, set good->bad sentiment",
             "sentiment": [
                 "good",
                 "bad"
@@ -47,6 +50,7 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
+            "sentiment_hint": "Set sentiment good->bad, as more hazards is bad, and less is better",
             "sentiment": [
                 "good",
                 "bad"
@@ -64,6 +68,7 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
+            "sentiment_hint": "Closer location to a power station reduces infrastructure costs and improves efficiency. Lower proximity values mean smaller distance (closer=efficient), high proximity values = longer distance (inefficient). So lower values is better choice, set sentiment good->bad",
             "sentiment": [
                 "good",
                 "bad"
@@ -81,6 +86,7 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
+            "sentiment_hint": "Less slope means more flat surface, which is good. Set sentiment good->bad",
             "sentiment": [
                 "good",
                 "bad"
@@ -98,6 +104,7 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
+            "sentiment_hint": "Less hot days is good. Set sentiment good->bad",
             "sentiment": [
                 "good",
                 "bad"
@@ -115,6 +122,7 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
+            "sentiment_hint": "Closer location to populated areas reduces infrastructure costs and improves efficiency. Lower proximity values mean smaller distance (closer=efficient), high proximity values = longer distance (inefficient). So lower values is better choice, set sentiment good->bad",
             "sentiment": [
                 "good",
                 "bad"
@@ -132,6 +140,7 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
+            "sentiment_hint": "Closer location to powerlines reduces infrastructure costs and improves efficiency. Lower proximity values mean smaller distance (closer=efficient), high proximity values = longer distance (inefficient). So lower values is better choice, set sentiment good->bad",
             "sentiment": [
                 "good",
                 "bad"

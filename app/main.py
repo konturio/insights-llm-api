@@ -32,7 +32,7 @@ routes = [
     Route("/llm-analytics", methods=['POST'], endpoint=llm_analytics),
     Route("/search", methods=['GET'], endpoint=search),
     Route("/search/click", methods=['POST'], endpoint=save_search_choice),
-    Route("/mcda_suggestion", methods=['GET'], endpoint=mcda_suggestion),
+    Route("/mcda_suggestion", methods=['GET'], endpoint=mcda_suggestion), #FIXME _ -> -
     Route("/health", endpoint=health),
 ]
 
