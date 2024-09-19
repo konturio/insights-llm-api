@@ -21,6 +21,8 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         ### Step 1: Pick 2..6 indicators that will help to perform geospatial analysis requested by user
 
         The user's request is: """{user_query}""".
+        When analyzing the user's query, first check if the request is meaningful. If the request appears to be random, or does not make sense as a valid request (e.g., gibberish or accidental typing), do not respond with an analysis. Instead, respond with {{"error": <reason why the input doesn't seem relevant or valid for analysis>}}. If the input is valid, proceed as usual.
+
         Use the user's bio "{user_bio}" to personalize the analysis and add contextual insights that might enhance the analysis. Focus on the request """{user_query}""", do not shift the main focus away from it and leverage bio details only if applicable. 
 
         Rules for selecting indicators:
