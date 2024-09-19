@@ -40,24 +40,24 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         Alternatively, you may paraphrase user's request to be more descriptive and contextual if needed.
         Analysis name will be displayed on UI as a label for the analysis you're creating.
 
-        ### Step 3: add sentiments to the indicators
+        ### Step 3: evaluate indicators
 
-        Sentiments can be either ["good", "bad"] or ["bad","good"].
-        Sentiment refers to the qualitative evaluation of an indicator's value as good or bad for the specific analysis being performed. It tells whether higher or lower values of an indicator are desirable in the context of the user's query.
+        You need to evaluate an indicator's value as good or bad for the specific analysis being performed, tell whether higher or lower values of an indicator are desirable in the context of the user's request.
+        Evaluation can be either "lower values are better" or "higher values are better". Set your evaluation to "indicator_evaluation" field.
 
-        #### Algorithm for choosing sentiment:
+        #### Algorithm for indicator evaluation:
 
         1. If the indicator's higher value represents a positive or desirable condition:
-            - choose "sentiment": ["bad", "good"]
-            - meaning: Higher indicator values are beneficial or preferred; lower values are less desirable. This sentiment is set when higher values contribute positively to the analysis outcome.
-        2. If the indicator's higher value represents a negative or undesirable condition:
-            - choose "sentiment": ["good", "bad"]
-            - meaning: Lower indicator values are beneficial or preferred; higher values are less desirable. This sentiment is set when lower values contribute positively to the analysis outcome.
+            - choose "indicator_evaluation": "higher values are better"
+            - meaning: Higher indicator values are beneficial or preferred; lower values are less desirable. This evaluation is set when higher values contribute positively to the analysis outcome.
+        2. If the indicator's lower value represents a positive or desirable condition:
+            - choose "indicator_evaluation": "lower values are better"
+            - meaning: Lower indicator values are beneficial or preferred; higher values are less desirable. This evaluation is set when lower values contribute positively to the analysis outcome.
 
-        Example 1: you've selected "Population (ppl/km²)" as one of axes for analysis. Is high population density is better than low for current analysis? set ["bad","good"]. With this sentiment, areas with higher population will get lower score than areas with low population.
-        Example 2: you've selected "Proximity to X". Proximity is usually measured in m or km, it's literally distance. Higher values represent greater distance, lower values are smaller distance. So if closer distance (lower proximity values) is more beneficial, sentiment should be ["good","bad"]. 
+        Example 1: you've selected "Population (ppl/km²)" as one of axes for analysis. Is high population density is better than low for current analysis? set "higher values are better".
+        Example 2: you've selected "Proximity to X". Proximity is usually measured in m or km, it's literally distance. Higher values represent greater distance, lower values are smaller distance. So if closer distance (lower proximity values) is more beneficial, evaluation should be "lower values are better".
 
-        Explain sentiment choice in "sentiment_hint" field: why the particular option is selected, how it follows the Algorithm for choosing sentiment.
+        Explain evaluation in "evaluation_hint" field: why the particular option is selected, how it follows the Algorithm for indicator evaluation.
 
         ### Step 4: create a json containing indicators selected for analysis
 
@@ -94,6 +94,7 @@ def get_axis_description(axis_data: dict) -> str:
     indicator_descriptions = frozenset(
         x['quotients'][0]['label'] + ': ' +
         x['quotients'][0]['description']
+            + ' This indicator is valid for non-populated areas between cities' if x['quotients'][0]['name'] == 'populated_areas_proximity_m' else ''
         for x in axis_data['data']['getAxes']['axis']
         if x['quotients'][0]['description']
     )

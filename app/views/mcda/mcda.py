@@ -75,6 +75,7 @@ def make_mcda_layer(llm_axis: dict, indicators_to_axis: dict[tuple, dict]) -> di
     indicators = axis['quotients']
     num, den = indicators
     stats = axis['datasetStats']
+    llm_sentiment = ['good', 'bad'] if llm_axis['indicator_evaluation'] == 'lower values are better' else ['bad', 'good']
     return {
         'id': num['name'] + '|' + den['name'],
         'name': axis['label'],
@@ -87,8 +88,8 @@ def make_mcda_layer(llm_axis: dict, indicators_to_axis: dict[tuple, dict]) -> di
             min(stats['maxValue'], stats['mean'] + 3*stats['stddev']),
         ],
         'datasetStats': axis['datasetStats'],
-        'sentiment': llm_axis['sentiment'],     # sentiment guessed by AI
-        'sentiment_hint': llm_axis['sentiment_hint'],     # explanation by AI
+        'sentiment': llm_sentiment,     # sentiment guessed by AI
+        'sentiment_hint': llm_axis['evaluation_hint'],     # explanation by AI
         'outliers': 'clamp',
         'coefficient': 1,
         'transformationFunction': axis['transformation']['transformation'],

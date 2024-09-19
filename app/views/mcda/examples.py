@@ -14,11 +14,8 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
-            "sentiment_hint": "More sunlight = better performance = good, less sunlight = bad. Set bad->good sentiment",
-            "sentiment": [
-                "bad",
-                "good"
-            ]
+            "indicator_evaluation": "higher values are better",
+            "evaluation_hint": "More sunlight = better performance = good, less sunlight = bad",
         },
         {
             "comment": "Chopping down forest for solar farm is economically inseafible",
@@ -32,11 +29,8 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "area_km2"
             },
-            "sentiment_hint": "Places with no or less forest are better for solar farms, set good->bad sentiment",
-            "sentiment": [
-                "good",
-                "bad"
-            ]
+            "indicator_evaluation": "lower values are better",
+            "evaluation_hint": "Places with no or less forest are better for solar farms",
         },
         {
             "comment": "It is bad idea to put solar farm in disaster-prone area",
@@ -50,11 +44,8 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
-            "sentiment_hint": "Set sentiment good->bad, as more hazards is bad, and less is better",
-            "sentiment": [
-                "good",
-                "bad"
-            ]
+            "indicator_evaluation": "lower values are better",
+            "evaluation_hint": "More hazards is bad, and less is better",
         },
         {
             "comment": "Solar farms energy needs to be integrated into the grid using a substation",
@@ -68,11 +59,8 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
-            "sentiment_hint": "Closer location to a power station reduces infrastructure costs and improves efficiency. Lower proximity values mean smaller distance (closer=efficient), high proximity values = longer distance (inefficient). So lower values is better choice, set sentiment good->bad",
-            "sentiment": [
-                "good",
-                "bad"
-            ]
+            "indicator_evaluation": "lower values are better",
+            "evaluation_hint": "Closer location to a power station reduces infrastructure costs and improves efficiency. Lower proximity values mean smaller distance (closer=efficient), high proximity values = longer distance (inefficient). So lower values is better choice",
         },
         {
             "comment": "Flat land is best for sun visibility",
@@ -86,11 +74,8 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
-            "sentiment_hint": "Less slope means more flat surface, which is good. Set sentiment good->bad",
-            "sentiment": [
-                "good",
-                "bad"
-            ]
+            "indicator_evaluation": "lower values are better",
+            "evaluation_hint": "Less slope means more flat surface, which is good",
         },
         {
             "comment": "Solar farms need to be cool",
@@ -104,11 +89,8 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
-            "sentiment_hint": "Less hot days is good. Set sentiment good->bad",
-            "sentiment": [
-                "good",
-                "bad"
-            ]
+            "indicator_evaluation": "lower values are better",
+            "evaluation_hint": "Less hot days is good",
         },
         {
             "comment": "Solar farms should probably be closest to consumers",
@@ -122,11 +104,8 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
-            "sentiment_hint": "Closer location to populated areas reduces infrastructure costs and improves efficiency. Lower proximity values mean smaller distance (closer=efficient), high proximity values = longer distance (inefficient). So lower values is better choice, set sentiment good->bad",
-            "sentiment": [
-                "good",
-                "bad"
-            ]
+            "indicator_evaluation": "lower values are better",
+            "evaluation_hint": "Closer location to populated areas reduces infrastructure costs and improves efficiency. Lower proximity values mean smaller distance (closer=efficient), high proximity values = longer distance (inefficient). So lower values is better choice",
         },
         {
             "comment": "Solar substations need to be connected using powerlines",
@@ -140,11 +119,8 @@ solar_farms_example = '''{
             "denominator": {
                 "name": "one"
             },
-            "sentiment_hint": "Closer location to powerlines reduces infrastructure costs and improves efficiency. Lower proximity values mean smaller distance (closer=efficient), high proximity values = longer distance (inefficient). So lower values is better choice, set sentiment good->bad",
-            "sentiment": [
-                "good",
-                "bad"
-            ]
+            "indicator_evaluation": "lower values are better",
+            "evaluation_hint": "Closer location to powerlines reduces infrastructure costs and improves efficiency. Lower proximity values mean smaller distance (closer=efficient), high proximity values = longer distance (inefficient). So lower values is better choice",
         }
     ]
 }'''
