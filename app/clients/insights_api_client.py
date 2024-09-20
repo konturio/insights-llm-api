@@ -156,6 +156,7 @@ async def query_insights_api(session: ClientSession, query: str, geojson=None) -
         geojson = json.dumps(geojson) if geojson else '{"type":"FeatureCollection","features":[]}'
         query = query % geojson.replace('\\', '\\\\').replace('"','\\"')
         #LOGGER.debug(query)
+    LOGGER.debug('requesting %s...', settings.INSIGHTS_API_URL)
     async with session.post(settings.INSIGHTS_API_URL, json={'query': query}) as resp:
         if resp.status != 200:
             raise HTTPException(status_code=resp.status)

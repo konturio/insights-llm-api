@@ -45,7 +45,7 @@ class OpenAIClient:
 
     async def get_cached_llm_commentary(self, prompt: str) -> str:
         to_cache = f'instructions: {self.instructions}; prompt: {prompt}'
-        LOGGER.debug('\n'.join(prompt.split(';')).replace('"', '\\"'))
+        #LOGGER.debug('\n'.join(prompt.split(';')).replace('"', '\\"'))
         cache_key = hashlib.md5(to_cache.encode("utf-8")).hexdigest()
         llm_model = await self.model
 

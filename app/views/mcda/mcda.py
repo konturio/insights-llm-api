@@ -1,6 +1,7 @@
 import time
 
 import ujson as json
+from starlette.exceptions import HTTPException
 
 from app.clients.insights_api_client import get_axes
 from app.clients.openai_client import OpenAIClient
@@ -29,6 +30,9 @@ async def get_mcda_suggestion(query: str, bio: str) -> dict:
 def make_valid_mcda(llm_response: str, axis_data: dict) -> dict:
     '''convert json response from LLM to MCDA format accepted by DN-FE'''
     llm_mcda = json.loads(llm_response)
+    if 'error' in llm_mcda:
+        raise HTTPException(status_code=422, detail=llm_mcda['error'])
+
     original_request = llm_mcda['original_request']
     analysis_name = llm_mcda['analysis_name']
     indicators_to_axis = {
@@ -71,6 +75,7 @@ def make_mcda_layer(llm_axis: dict, indicators_to_axis: dict[tuple, dict]) -> di
     indicators = axis['quotients']
     num, den = indicators
     stats = axis['datasetStats']
+    llm_sentiment = ['good', 'bad'] if llm_axis['indicator_evaluation'] == 'lower values are better' else ['bad', 'good']
     return {
         'id': num['name'] + '|' + den['name'],
         'name': axis['label'],
@@ -83,8 +88,8 @@ def make_mcda_layer(llm_axis: dict, indicators_to_axis: dict[tuple, dict]) -> di
             min(stats['maxValue'], stats['mean'] + 3*stats['stddev']),
         ],
         'datasetStats': axis['datasetStats'],
-        'sentiment': llm_axis['sentiment'],     # sentiment guessed by AI
-        'sentiment_hint': llm_axis['sentiment_hint'],     # explanation by AI
+        'sentiment': llm_sentiment,     # sentiment guessed by AI
+        'sentiment_hint': llm_axis['evaluation_hint'],     # explanation by AI
         'outliers': 'clamp',
         'coefficient': 1,
         'transformationFunction': axis['transformation']['transformation'],
