@@ -23,8 +23,9 @@ async def mcda_suggestion(request: 'Request') -> 'Response':
         raise HTTPException(status_code=400, detail='missing query')
 
     app_data = await get_app_data(app_id, auth_token=request.headers.get('Authorization'))
-    if feature_enabled('llm_mcda', app_data):
-        bio = app_data['current_user'].get('bio')
-        llm_mcda = await get_mcda_suggestion(query, bio)
+    if not feature_enabled('llm_mcda', app_data):
+        raise HTTPException(status_code=403, detail='llm_mcda is not enabled for the user')
+    bio = app_data['current_user'].get('bio')
+    llm_mcda = await get_mcda_suggestion(query, bio)
 
     return JSONResponse(llm_mcda)
