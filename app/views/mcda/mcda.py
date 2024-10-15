@@ -76,8 +76,8 @@ def make_valid_mcda(llm_response: str, axis_data: dict) -> dict:
 
 def make_mcda_layer(llm_axis: dict, indicators_to_axis: dict[tuple, dict]) -> dict:
     '''axis is object returned by LLM, indicators_to_axis is data from insights api'''
-    num = llm_axis['numerator']['name']
-    den = llm_axis['denominator']['name']
+    num = llm_axis['numerator']
+    den = llm_axis['denominator']
     axis = indicators_to_axis[(num, den)]
     indicators = axis['quotients']
     num, den = indicators

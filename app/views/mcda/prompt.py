@@ -79,7 +79,6 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         user_query=query,
     )
     # TODO explain min max sttdev
-    return txt
 
 
 def get_axis_description(axis_data: dict) -> str:
@@ -90,27 +89,19 @@ def get_axis_description(axis_data: dict) -> str:
             'max': x['datasetStats']['maxValue'],
     #        'mean': x['datasetStats']['mean'],
     #        'stddev': x['datasetStats']['stddev'],
-            'numerator': {
-                'name': x['quotients'][0]['name'],
-                'label': x['quotients'][0]['label'],
-            },
-            'denominator': {
-                'name': x['quotients'][1]['name'],
-            },
+            'numerator': x['quotients'][0]['name'],
+            'denominator': x['quotients'][1]['name'],
+            'description': x['quotients'][0]['description']
+                + ' This indicator is valid for non-populated areas between cities'
+                        if x['quotients'][0]['name'] == 'populated_areas_proximity_m' else ''
+                + ' Lower values indicate more peace and safety, high values imply ongoing conflicts and high militarization' 
+                        if x['quotients'][0]['name'] == 'safety_index' else ''
         }
         for x in sorted(axis_data['data']['getAxes']['axis'], key=lambda a: a['quality'] or 0, reverse=True)
         if (x['quality'] and x['quality'] > 0.5
                 and x['quotients'][1]['name'] != 'populated_area_km2')  # weird denominator, area_km2 replaces it for any analysis
     ]
 
-    indicator_descriptions = frozenset(
-        x['quotients'][0]['label'] + ': ' +
-        x['quotients'][0]['description']
-            + ' This indicator is valid for non-populated areas between cities' if x['quotients'][0]['name'] == 'populated_areas_proximity_m' else ''
-            + ' Lower values indicate more peace and safety, high values imply ongoing conflicts and high militarization' if x['quotients'][0]['name'] == 'safety_index' else ''
-        for x in axis_data['data']['getAxes']['axis']
-        if x['quotients'][0]['description']
-    )
     return '''
         ## System datasets
 
@@ -119,12 +110,7 @@ def get_axis_description(axis_data: dict) -> str:
             {axes}
         """
 
-        Here are descriptions for indicators (numerators and denominators) that are included in axes: """
-            {indicators}
-        """
-
         Note that "Proximity to X" indicators are usually measured in m or km, it's literally distance. Higher values represent greater distance, lower values are smaller distance.
     '''.format(
         axes='\n'.join(str(a) for a in axes),
-        indicators=';\n'.join(sorted(indicator_descriptions)),
     )
