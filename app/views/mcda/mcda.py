@@ -93,6 +93,9 @@ def make_mcda_layer(llm_axis: dict, indicators_to_axis: dict[tuple, dict]) -> di
         'range': [
             max(stats['minValue'], stats['mean'] - 3*stats['stddev']),
             min(stats['maxValue'], stats['mean'] + 3*stats['stddev']),
+        ] if stats['stddev'] is not None and stats['mean'] is not None else [
+            stats['minValue'],
+            stats['maxValue'],
         ],
         'datasetStats': axis['datasetStats'],
         'sentiment': llm_sentiment,     # sentiment guessed by AI
