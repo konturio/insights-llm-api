@@ -27,12 +27,14 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
 
         Rules for selecting indicators:
 
-        1. Identify indicators that directly measure or are significantly impacted by the user's specific request, rather than those that are proxies or indirectly related.
-        2. Start with most important indicators.
-        3. Avoid using more than 6 layers in the analysis.
-        4. When adding new indicator to the analysis, check if you've already chosen some layers that are similar or overlap in meaning. Identify and select the most suitable one that best represents the intended analysis, rather than including all similar layers.  Each chosen layer should add distinct and valuable insights to the analysis. For example, population density and proximity to populated areas are interchangable: they both measure population density in different ways, it's redundant to include both.
-        6. Reevaluate the chosen indicators to ensure they align with """{user_query}""" request, rather than the consequences or secondary effects.
-        5. Explain your picks in "comment" field. Provide brief explanations for each selected layer, directly linking it to the user's request.  
+        1. Please try your best to select the most relevant indicators for the map analysis of the user's query "{user_query}".
+        2. Identify indicators that directly measure or are significantly impacted by the user's specific request, rather than those that are proxies or indirectly related.
+        3. Start with most important indicators.
+        4. Avoid using more than 6 layers in the analysis.
+        5. When adding new indicator to the analysis, check if you've already chosen some layers that are similar or overlap in meaning. Identify and select the most suitable one that best represents the intended analysis, rather than including all similar layers.  Each chosen layer should add distinct and valuable insights to the analysis. For example, population density and proximity to populated areas are interchangable: they both measure population density in different ways, it's redundant to include both.
+        6. Do not include the same indicator twice.
+        7. Reevaluate the chosen indicators to ensure they align with """{user_query}""" request, rather than the consequences or secondary effects.
+        8. Explain your picks in "comment" field. Provide brief explanations for each selected layer, directly linking it to the user's request.  
 
         ### Step 2: create a name for analysis
 
@@ -53,6 +55,7 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         2. If the indicator's lower value represents a positive or desirable condition:
             - choose "indicator_evaluation": "lower values are better"
             - meaning: Lower indicator values are beneficial or preferred; higher values are less desirable. This evaluation is set when lower values contribute positively to the analysis outcome.
+        "indicator_evaluation" should match general humanitarian-expected direction if applicable for user's request. If high indicator values imply lower risk of some disaster, then "higher values are better". And if low indicator values imply lower risk, "lower values are better".
 
         Example 1: you've selected "Population (ppl/km²)" as one of axes for analysis. Is high population density is better than low for current analysis? set "higher values are better".
         Example 2: you've selected "Proximity to X". Proximity is usually measured in m or km, it's literally distance. Higher values represent greater distance, lower values are smaller distance. So if closer distance (lower proximity values) is more beneficial, evaluation should be "lower values are better".
@@ -88,13 +91,15 @@ def get_axis_description(axis_data: dict) -> str:
             },
         }
         for x in sorted(axis_data['data']['getAxes']['axis'], key=lambda a: a['quality'] or 0, reverse=True)
-        if x['quality'] and x['quality'] > 0.5
+        if (x['quality'] and x['quality'] > 0.5
+                and x['quotients'][1]['name'] != 'populated_area_km2')  # weird denominator, area_km2 replaces it for any analysis
     ]
 
     indicator_descriptions = frozenset(
         x['quotients'][0]['label'] + ': ' +
         x['quotients'][0]['description']
             + ' This indicator is valid for non-populated areas between cities' if x['quotients'][0]['name'] == 'populated_areas_proximity_m' else ''
+            + ' Lower values indicate more peace and safety, high values imply ongoing conflicts and high militarization' if x['quotients'][0]['name'] == 'safety_index' else ''
         for x in axis_data['data']['getAxes']['axis']
         if x['quotients'][0]['description']
     )

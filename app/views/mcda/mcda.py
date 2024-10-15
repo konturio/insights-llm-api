@@ -41,9 +41,16 @@ def make_valid_mcda(llm_response: str, axis_data: dict) -> dict:
     layers = []
     for llm_layer in llm_mcda['axes']:
         try:
-            layers.append(make_mcda_layer(llm_layer, indicators_to_axis))
+            mcda_layer = make_mcda_layer(llm_layer, indicators_to_axis)
+            if [x for x in layers if x['id'] == mcda_layer['id']]:
+                LOGGER.warn('LLM suggested layer %s twice', mcda_layer['id'])
+                continue
+            layers.append(mcda_layer)
         except KeyError as e:
             LOGGER.warn('layer suggested by LLM does not exist: %s', e)
+    if not layers:
+        # LLM made up all the layers in analysis
+        raise HTTPException(status_code=422, detail='no suitable layers found')
     return {
         "type": "mcda",
         "config": {
