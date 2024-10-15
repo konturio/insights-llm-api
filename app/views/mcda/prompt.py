@@ -23,7 +23,7 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         The user's request is: """{user_query}""".
         When analyzing the user's query, first check if the request is meaningful. If the request appears to be random, or does not make sense as a valid request (e.g., gibberish or accidental typing), do not respond with an analysis. Instead, respond with {{"error": <reason why the input doesn't seem relevant or valid for analysis>}}. If the input is valid, proceed as usual.
 
-        Use the user's bio "{user_bio}" to personalize the analysis and add contextual insights that might enhance the analysis. Focus on the request """{user_query}""", do not shift the main focus away from it and leverage bio details only if applicable. 
+        Use the user's bio "{user_bio}" to prioritize indicators that align with the user's lifestyle or preferences. When the user's query is vague, the bio (if present) can provide clues about their priorities or concerns. But focus on the request """{user_query}""", do not shift the main focus away from it and leverage bio details only if applicable. 
 
         Rules for selecting indicators:
 
@@ -46,23 +46,29 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
 
         You need to evaluate an indicator's value as good or bad for the specific analysis being performed, tell whether higher or lower values of an indicator are desirable in the context of the user's request.
         Evaluation can be either "lower values are better" or "higher values are better". Set your evaluation to "indicator_evaluation" field.
+        Explain evaluation in "evaluation_hint" field: why the particular option is selected, how it follows the Algorithm for indicator evaluation.
 
         #### Algorithm for indicator evaluation:
 
-        1. If the indicator's higher value represents a positive or desirable condition:
-            - choose "indicator_evaluation": "higher values are better"
-            - meaning: Higher indicator values are beneficial or preferred; lower values are less desirable. This evaluation is set when higher values contribute positively to the analysis outcome.
-        2. If the indicator's lower value represents a positive or desirable condition:
-            - choose "indicator_evaluation": "lower values are better"
-            - meaning: Lower indicator values are beneficial or preferred; higher values are less desirable. This evaluation is set when lower values contribute positively to the analysis outcome.
-        3. For indicators related to disasters, if higher values indicate a lower risk of the disaster, choose 'higher values are better'. Conversely, if lower values indicate a lower risk of the disaster, choose 'lower values are better'. Always evaluate based on how the indicator value impacts the risk level of the disaster being analyzed.
+        1. For disaster risk and environmental impact assessment requests:
+        - If higher indicator values indicate a higher risk or impact, choose "lower values are better", because low values => lower risk => low risk is desirable => lower values are better. Conversely, if lower values indicate a higher risk of the disaster, choose "higher values are better" (high values => lower risk => low risk is desirable => higher values are better).
+        Example evaluation for landslide risk assesment:
+        """
+            "axis_name": "Slope (°)",
+            "evaluation_hint": "Higher slope values indicate steeper terrain, which increases landslide risk.",
+            "indicator_evaluation": "lower values are better"  # because low values = low risk = low risk is desirable
+        """
 
-        Example 1: you've selected "Population (ppl/km²)" as one of axes for analysis. Is high population density is better than low for current analysis? set "higher values are better".
-        Example 2: you've selected "Proximity to X". Proximity is usually measured in m or km, it's literally distance. Higher values represent greater distance, lower values are smaller distance. So if closer distance (lower proximity values) is more beneficial, evaluation should be "lower values are better".
+        2. For site selection, suitability analysis and other requests:
+        - If the indicator's higher value represents a positive or desirable condition, choose "indicator_evaluation": "higher values are better", meaning that higher indicator values are beneficial or preferred for user's request, and lower values are less desirable. "higher values are better" is set when higher values contribute positively to the analysis outcome. Otherwise set "lower values are better".
+        Example evaluation for new wine shop placement:
+        """
+            "axis_name": "Hotels to populated area (n/km²)",
+            "evaluation_hint": "Closer proximity to hotels is beneficial",
+            "indicator_evaluation": "higher values are better"  # because high values = more benefits = more benefits is desirable
+        """
 
         After reviewing these instructions thoroughly, select the most appropriate indicator_evaluation and explain your choices clearly. Be sure your first response aligns fully with these guidelines.
-
-        Explain evaluation in "evaluation_hint" field: why the particular option is selected, how it follows the Algorithm for indicator evaluation.
 
         ### Step 4: create a json containing indicators selected for analysis
 
@@ -116,6 +122,8 @@ def get_axis_description(axis_data: dict) -> str:
         Here are descriptions for indicators (numerators and denominators) that are included in axes: """
             {indicators}
         """
+
+        Note that "Proximity to X" indicators are usually measured in m or km, it's literally distance. Higher values represent greater distance, lower values are smaller distance.
     '''.format(
         axes='\n'.join(str(a) for a in axes),
         indicators=';\n'.join(sorted(indicator_descriptions)),
