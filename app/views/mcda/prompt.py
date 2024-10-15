@@ -55,10 +55,12 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         2. If the indicator's lower value represents a positive or desirable condition:
             - choose "indicator_evaluation": "lower values are better"
             - meaning: Lower indicator values are beneficial or preferred; higher values are less desirable. This evaluation is set when lower values contribute positively to the analysis outcome.
-        For indicators related to disasters, if higher values indicate a lower risk of the disaster, choose 'higher values are better'. Conversely, if lower values indicate a lower risk of the disaster, choose 'lower values are better'. Always evaluate based on how the indicator value impacts the risk level of the disaster being analyzed.
+        3. For indicators related to disasters, if higher values indicate a lower risk of the disaster, choose 'higher values are better'. Conversely, if lower values indicate a lower risk of the disaster, choose 'lower values are better'. Always evaluate based on how the indicator value impacts the risk level of the disaster being analyzed.
 
         Example 1: you've selected "Population (ppl/km²)" as one of axes for analysis. Is high population density is better than low for current analysis? set "higher values are better".
         Example 2: you've selected "Proximity to X". Proximity is usually measured in m or km, it's literally distance. Higher values represent greater distance, lower values are smaller distance. So if closer distance (lower proximity values) is more beneficial, evaluation should be "lower values are better".
+
+        After reviewing these instructions thoroughly, select the most appropriate indicator_evaluation and explain your choices clearly. Be sure your first response aligns fully with these guidelines.
 
         Explain evaluation in "evaluation_hint" field: why the particular option is selected, how it follows the Algorithm for indicator evaluation.
 
