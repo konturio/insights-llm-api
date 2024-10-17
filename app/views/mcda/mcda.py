@@ -41,9 +41,16 @@ def make_valid_mcda(llm_response: str, axis_data: dict) -> dict:
     layers = []
     for llm_layer in llm_mcda['axes']:
         try:
-            layers.append(make_mcda_layer(llm_layer, indicators_to_axis))
+            mcda_layer = make_mcda_layer(llm_layer, indicators_to_axis)
+            if [x for x in layers if x['id'] == mcda_layer['id']]:
+                LOGGER.warn('LLM suggested layer %s twice', mcda_layer['id'])
+                continue
+            layers.append(mcda_layer)
         except KeyError as e:
             LOGGER.warn('layer suggested by LLM does not exist: %s', e)
+    if not layers:
+        # LLM made up all the layers in analysis
+        raise HTTPException(status_code=422, detail='no suitable layers found')
     return {
         "type": "mcda",
         "config": {
@@ -69,8 +76,8 @@ def make_valid_mcda(llm_response: str, axis_data: dict) -> dict:
 
 def make_mcda_layer(llm_axis: dict, indicators_to_axis: dict[tuple, dict]) -> dict:
     '''axis is object returned by LLM, indicators_to_axis is data from insights api'''
-    num = llm_axis['numerator']['name']
-    den = llm_axis['denominator']['name']
+    num = llm_axis['numerator']
+    den = llm_axis['denominator']
     axis = indicators_to_axis[(num, den)]
     indicators = axis['quotients']
     num, den = indicators
@@ -86,6 +93,9 @@ def make_mcda_layer(llm_axis: dict, indicators_to_axis: dict[tuple, dict]) -> di
         'range': [
             max(stats['minValue'], stats['mean'] - 3*stats['stddev']),
             min(stats['maxValue'], stats['mean'] + 3*stats['stddev']),
+        ] if stats['stddev'] is not None and stats['mean'] is not None else [
+            stats['minValue'],
+            stats['maxValue'],
         ],
         'datasetStats': axis['datasetStats'],
         'sentiment': llm_sentiment,     # sentiment guessed by AI
