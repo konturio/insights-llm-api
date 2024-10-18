@@ -86,13 +86,18 @@ async def search(request: 'Request') -> 'Response':
     data = request.query_params
     if not (app_id := data.get('appId')):
         raise HTTPException(status_code=400, detail='missing appId')
-    if not (query := data.get('query').strip()):
+    if not (query := data.get('query', '').strip()):
         raise HTTPException(status_code=400, detail='missing query')
 
     lang = request.headers.get('User-Language')
     search_results = {}
 
     app_data = await get_app_data(app_id, auth_token=request.headers.get('Authorization'), user_data=False)
+
+    if not feature_enabled('search_bar', app_data):
+        # 19793 - search is enabled for anon DN users, but not for Atlas
+        raise HTTPException(status_code=401)
+
     if feature_enabled('search_locations', app_data):
         locations = await search_locations(query, lang)
         for feature in locations['features']:
