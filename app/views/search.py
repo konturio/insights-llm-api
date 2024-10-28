@@ -96,7 +96,7 @@ async def search(request: 'Request') -> 'Response':
 
     if not feature_enabled('search_bar', app_data):
         # 19793 - search is enabled for anon DN users, but not for Atlas
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail='unauthorized')
 
     if feature_enabled('search_locations', app_data):
         locations = await search_locations(query, lang)
