@@ -55,6 +55,7 @@ axis_graphql = """
             quotients {
                 name
                 label
+                maxZoom
                 emoji
                 description
                 copyrights
