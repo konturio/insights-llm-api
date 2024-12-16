@@ -94,7 +94,7 @@ def get_axis_description(axis_data: dict) -> str:
             'description': x['quotients'][0]['description']
                 + ' This indicator is valid for non-populated areas between cities'
                         if x['quotients'][0]['name'] == 'populated_areas_proximity_m' else ''
-                + ' Lower values indicate more peace and safety, high values imply ongoing conflicts and high militarization' 
+                + ' Higher values indicate more peace and safety, low values imply ongoing conflicts and high militarization'
                         if x['quotients'][0]['name'] == 'safety_index' else ''
         }
         for x in sorted(axis_data['data']['getAxes']['axis'], key=lambda a: a['quality'] or 0, reverse=True)
