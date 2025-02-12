@@ -102,7 +102,7 @@ def make_mcda_layer(llm_axis: dict, indicators_to_axis: dict[tuple, dict]) -> di
         'sentiment_hint': llm_axis['evaluation_hint'],     # explanation by AI
         'outliers': 'clamp',
         'coefficient': 1,
-        'transformationFunction': axis['transformation']['transformation'],
+        'transformationFunction': (axis['transformation'] or {}).get('transformation'),
         'transformation': axis['transformation'],
         'normalization': 'max-min',
     }
