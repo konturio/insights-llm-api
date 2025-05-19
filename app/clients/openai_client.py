@@ -128,7 +128,7 @@ class OpenAIClient:
                 run_id=run.id
             )
             LOGGER.debug("openAI thread status: %s", run.status)
-            if run.status == "failed":
+            if run.status in ("failed", "expired"):
                 raise HTTPException(status_code=400, detail='failed to get OpenAI response')
 
         messages = await self.client.beta.threads.messages.list(
