@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import ujson as json
 from starlette.exceptions import HTTPException
@@ -323,7 +323,13 @@ def value_to_str(x: float, entry: dict, sigma=False):
             and x < 2000000000):
         if entry['calculation'] == 'stddev':
             return str(timedelta(seconds=int(x)))
-        return datetime.fromtimestamp(int(x)).isoformat()
+        # Timestamp values are delivered in UTC. Include the 'Z' suffix to
+        # explicitly denote the UTC 00 offset.
+        return (
+            datetime.fromtimestamp(int(x), tz=timezone.utc)
+            .isoformat()
+            .replace('+00:00', 'Z')
+        )
 
     unit_str = unit_to_str(entry, sigma)
     # Format the value to be more readable, especially handling scientific notation.
