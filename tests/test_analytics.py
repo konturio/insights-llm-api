@@ -69,7 +69,7 @@ class TestAnalytics(unittest.TestCase):
             'reference_area_sigma': 0,
         }]
 
-        expected = 'mean of 🐱 OSM last edit is 2024-04-25T05:02:54 (globally 2020-09-14T19:51:05, 1.00 sigma)'
+        expected = 'mean of 🐱 OSM last edit is 2024-04-25T05:02:54Z (globally 2020-09-14T19:51:05Z, 1.00 sigma)'
         actual = to_readable_sentence(selected_area_data, world_data)[0]
         self.assertEqual(expected, actual)
 
