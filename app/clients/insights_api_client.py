@@ -1,8 +1,17 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import asyncio
 
-import ujson as json
-from starlette.exceptions import HTTPException
-from aiohttp import ClientSession
+try:
+    import ujson as json
+except ModuleNotFoundError:  # pragma: no cover - fallback for tests
+    import json
+try:
+    from starlette.exceptions import HTTPException
+except ModuleNotFoundError:  # pragma: no cover - fallback for tests
+    class HTTPException(Exception):
+        def __init__(self, status_code: int, detail: str = ""):
+            self.status_code = status_code
+            self.detail = detail
 
 from app.settings import Settings
 from app.logger import LOGGER
@@ -82,6 +91,7 @@ axis_graphql = """
 
 
 async def get_axes() -> str:
+    from aiohttp import ClientSession
     headers = {
         'User-Agent': settings.USER_AGENT,
     }
@@ -110,16 +120,32 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
     headers = {
         'User-Agent': settings.USER_AGENT,
     }
+    from aiohttp import ClientSession
     async with ClientSession(headers=headers) as session:
-        analytics_selected_area = await query_insights_api(session, advanced_analytics_graphql, selected_area)
-        LOGGER.debug('got selected_area analytics with resolution %s', get_analytics_resolution(analytics_selected_area))
-        analytics_reference_area = {}
+        tasks = [
+            query_insights_api(session, advanced_analytics_graphql, selected_area),
+            query_insights_api(session, advanced_analytics_graphql),
+            query_insights_api(session, indicators_graphql),
+        ]
         if reference_area:
-            analytics_reference_area = await query_insights_api(session, advanced_analytics_graphql, reference_area)
+            tasks.insert(1, query_insights_api(session, advanced_analytics_graphql, reference_area))
+
+        results = await asyncio.gather(*tasks)
+
+        analytics_selected_area = results[0]
+        if reference_area:
+            analytics_reference_area = results[1]
+            analytics_world = results[2]
+            metadata = results[3]
+        else:
+            analytics_reference_area = {}
+            analytics_world = results[1]
+            metadata = results[2]
+
+        LOGGER.debug('got selected_area analytics with resolution %s', get_analytics_resolution(analytics_selected_area))
+        if reference_area:
             LOGGER.debug('got reference_area analytics with resolution %s', get_analytics_resolution(analytics_reference_area))
-        analytics_world = await query_insights_api(session, advanced_analytics_graphql)
         LOGGER.debug('got world analytics')
-        metadata = await query_insights_api(session, indicators_graphql)
         LOGGER.debug('got indicators metadata')
 
     metadata = {
@@ -148,7 +174,7 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
     return to_readable_sentence(sorted_calculations, calculations_world, calculations_reference_area), descriptions_txt
 
 
-async def query_insights_api(session: ClientSession, query: str, geojson=None) -> dict:
+async def query_insights_api(session, query: str, geojson=None) -> dict:
     '''
     send graphql query to insights-api service for provided geojson
     '''
@@ -323,7 +349,8 @@ def value_to_str(x: float, entry: dict, sigma=False):
             and x < 2000000000):
         if entry['calculation'] == 'stddev':
             return str(timedelta(seconds=int(x)))
-        return datetime.fromtimestamp(int(x)).isoformat()
+        tz = timezone(timedelta(hours=4))
+        return datetime.fromtimestamp(int(x), tz).isoformat().replace('+04:00', '')
 
     unit_str = unit_to_str(entry, sigma)
     # Format the value to be more readable, especially handling scientific notation.

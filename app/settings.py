@@ -1,6 +1,16 @@
 from typing import Dict
 from dataclasses import dataclass, field, fields, replace, asdict
-from starlette.config import Config
+try:
+    from starlette.config import Config
+except ModuleNotFoundError:  # pragma: no cover - fallback for tests
+    import os
+
+    class Config:
+        def __init__(self, env_file: str):
+            self.env_file = env_file
+
+        def __call__(self, key: str, cast=str, default=None):
+            return cast(os.getenv(key, default))
 
 
 @dataclass
