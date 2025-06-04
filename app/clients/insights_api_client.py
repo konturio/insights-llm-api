@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+import asyncio
 import ujson as json
 from starlette.exceptions import HTTPException
 from aiohttp import ClientSession
@@ -111,16 +112,31 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
         'User-Agent': settings.USER_AGENT,
     }
     async with ClientSession(headers=headers) as session:
-        analytics_selected_area = await query_insights_api(session, advanced_analytics_graphql, selected_area)
-        LOGGER.debug('got selected_area analytics with resolution %s', get_analytics_resolution(analytics_selected_area))
-        analytics_reference_area = {}
+        selected_task = asyncio.create_task(
+            query_insights_api(session, advanced_analytics_graphql, selected_area)
+        )
+        world_task = asyncio.create_task(
+            query_insights_api(session, advanced_analytics_graphql)
+        )
+        metadata_task = asyncio.create_task(
+            query_insights_api(session, indicators_graphql)
+        )
+        tasks = [selected_task, world_task, metadata_task]
+
+        reference_task = None
         if reference_area:
-            analytics_reference_area = await query_insights_api(session, advanced_analytics_graphql, reference_area)
-            LOGGER.debug('got reference_area analytics with resolution %s', get_analytics_resolution(analytics_reference_area))
-        analytics_world = await query_insights_api(session, advanced_analytics_graphql)
+            reference_task = asyncio.create_task(
+                query_insights_api(session, advanced_analytics_graphql, reference_area)
+            )
+            tasks.append(reference_task)
+
+        analytics_selected_area, analytics_world, metadata, *rest = await asyncio.gather(*tasks)
+        LOGGER.debug('got selected_area analytics with resolution %s', get_analytics_resolution(analytics_selected_area))
         LOGGER.debug('got world analytics')
-        metadata = await query_insights_api(session, indicators_graphql)
         LOGGER.debug('got indicators metadata')
+        analytics_reference_area = rest[0] if reference_area else {}
+        if reference_area:
+            LOGGER.debug('got reference_area analytics with resolution %s', get_analytics_resolution(analytics_reference_area))
 
     metadata = {
         x['name']: {
