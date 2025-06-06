@@ -30,8 +30,8 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         1. Please try your best to select the most relevant indicators for the map analysis of the user's query "{user_query}".
         2. Identify indicators that directly measure or are significantly impacted by the user's specific request, rather than those that are proxies or indirectly related.
         3. Start with most important indicators.
-        4. Avoid using more than 6 layers in the analysis.
-        5. When adding new indicator to the analysis, check if you've already chosen some layers that are similar or overlap in meaning. Identify and select the most suitable one that best represents the intended analysis, rather than including all similar layers.  Each chosen layer should add distinct and valuable insights to the analysis. For example, population density and proximity to populated areas are interchangable: they both measure population density in different ways, it's redundant to include both.
+        4. Avoid using more than 3 layers in the analysis.
+        5. When adding new indicator to the analysis, check if you've already chosen some layers that are similar or overlap in meaning. Identify and select the most suitable one that best represents the intended analysis, rather than including all similar layers.  Each chosen layer should add distinct and valuable insights to the analysis. For example, population density and proximity to populated areas are interchangable: they both measure population density in different ways, it's redundant to include both. Same for Hazard & Exposure and Number of days under X
         6. Do not include the same indicator twice.
         7. Reevaluate the chosen indicators to ensure they align with """{user_query}""" request, rather than the consequences or secondary effects.
         8. Explain your picks in "comment" field. Provide brief explanations for each selected layer, directly linking it to the user's request.  
