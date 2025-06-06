@@ -43,6 +43,8 @@ jobs:
 
       - name: Add image tag to step summary
         env:
-          IMAGE_TAG: ${{ github.ref_name }}.${{ steps.get-cloned.outputs.SHA }}.${{ github.run_attempt }}
-        run: |-
+          IMAGE_TAG: ${{ format('{0}.{1}.{2}', github.ref_name, steps.get-cloned.outputs.SHA, github.run_attempt) }}
+        run: |
+          # branch names may contain slashes; sanitize for Docker tag
+          IMAGE_TAG="$(echo "$IMAGE_TAG" | tr '/' '-')"
           echo "<h3>Docker image tag</h3> $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
