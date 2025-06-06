@@ -27,14 +27,16 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
 
         Rules for selecting indicators:
 
-        1. Please try your best to select the most relevant indicators for the map analysis of the user's query "{user_query}".
-        2. Identify indicators that directly measure or are significantly impacted by the user's specific request, rather than those that are proxies or indirectly related.
-        3. Start with most important indicators.
-        4. Avoid using more than 6 layers in the analysis.
-        5. When adding new indicator to the analysis, check if you've already chosen some layers that are similar or overlap in meaning. Identify and select the most suitable one that best represents the intended analysis, rather than including all similar layers.  Each chosen layer should add distinct and valuable insights to the analysis. For example, population density and proximity to populated areas are interchangable: they both measure population density in different ways, it's redundant to include both.
-        6. Do not include the same indicator twice.
-        7. Reevaluate the chosen indicators to ensure they align with """{user_query}""" request, rather than the consequences or secondary effects.
-        8. Explain your picks in "comment" field. Provide brief explanations for each selected layer, directly linking it to the user's request.  
+        - Select the most relevant indicators for the map analysis of the user's query "{user_query}".
+        - Identify indicators that directly measure or are significantly impacted by the user's specific request, rather than those that are proxies or indirectly related.
+        - Start with most important indicators.
+        - Include the subject of analysis into the indicators list. e.g. Forest area for forest analysis, Hotels for hotel analysis.
+        - Avoid using more than 6 layers in the analysis.
+        - Do not include the same indicator twice.
+        - Each indicator should add distinct and valuable insights to the analysis. Skip adding similar ones. e.g. population density and proximity to populated areas are interchangable: they both measure population density in different ways, it's redundant to include both.
+        - Ensure that ensure indicatos align with """{user_query}""" request, rather than the consequences or secondary effects.
+        - Explain your picks in "comment" field. Provide brief explanations for each selected layer, directly linking it to the user's request.
+        - Indicatos are provided with multiple normalization options (by area, by population, by roads, etc). Select only relevant normalization.
 
         ### Step 2: create a name for analysis
 
@@ -44,7 +46,7 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
 
         ### Step 3: evaluate indicators
 
-        You need to evaluate an indicator's value as good or bad for the specific analysis being performed, tell whether higher or lower values of an indicator are desirable in the context of the user's request.
+        You need to evaluate an indicator's value axis as good or bad for the specific analysis being performed, tell whether higher or lower values of an indicator are desirable in the context of the user's request.
         Evaluation can be either "lower values are better" or "higher values are better". Set your evaluation to "indicator_evaluation" field.
         Explain evaluation in "evaluation_hint" field: why the particular option is selected, how it follows the Algorithm for indicator evaluation.
 
