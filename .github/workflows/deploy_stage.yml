@@ -66,7 +66,9 @@ jobs:
         id: set_tag
         run: |
           IMAGE_TAG="${{ github.ref_name }}.${{ steps.get_cloned.outputs.sha }}.${{ github.run_attempt }}"
-          IMAGE_TAG="$(echo "$IMAGE_TAG" | tr '/' '-')"
+          # sanitize branch name to produce a valid docker tag
+          IMAGE_TAG="$(echo "$IMAGE_TAG" | tr '/ ' '--' | tr -cs 'A-Za-z0-9_.-' '-' )"
+          IMAGE_TAG="$(echo "$IMAGE_TAG" | sed 's/^[^A-Za-z0-9]*//')"
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
 
