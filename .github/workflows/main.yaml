@@ -18,6 +18,14 @@ jobs:
         run: |-
           echo "::set-output name=SHA::$(git log -1 --format='%h')"
 
+      - name: Set and sanitize image tag
+        id: set-tag
+        run: |
+          IMAGE_TAG="${{ github.ref_name }}.${{ steps.get-cloned.outputs.SHA }}.${{ github.run_attempt }}"
+          IMAGE_TAG="$(echo "$IMAGE_TAG" | tr '/' '-')"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
       - name: Logging into Nexus Container Registry
         uses: docker/login-action@v2
         with:
@@ -31,7 +39,7 @@ jobs:
         with:
           images: nexus.kontur.io:8085/konturdev/insights-llm-api
           tags: |
-            type=raw,value=${{ github.ref_name }}.{{sha}}.${{ github.run_attempt }}
+            type=raw,value=${{ env.IMAGE_TAG }}
 
       - name: Building and pushing Docker image
         uses: docker/build-push-action@v3.0.0
@@ -42,7 +50,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Add image tag to step summary
-        env:
-          IMAGE_TAG: ${{ github.ref_name }}.${{ steps.get-cloned.outputs.SHA }}.${{ github.run_attempt }}
-        run: |-
+        run: |
           echo "<h3>Docker image tag</h3> $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
