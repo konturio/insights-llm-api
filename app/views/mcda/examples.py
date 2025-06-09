@@ -90,7 +90,7 @@ cropland_burn_risk_example = '''{
     "analysis_name": "Cropland Wildfire Risk Assessment",
     "axes": [
         {
-            "comment": "Drought increases the potential for cropland to burn.",
+            "comment": "Drought increases the potential for cropland to burn. There's similar indicators: 'Drought hazard' (drought - index), 'Drought exposure' (drought_days_count).  Choosing `Drought exposure` to display more simple to interpret measure in days",
             "axis_name": "Number of days under drought impact, last year (n)",
             "min": 0,
             "max": 363,
