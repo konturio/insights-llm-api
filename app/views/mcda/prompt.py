@@ -1,4 +1,4 @@
-from .examples import solar_farms_example
+from .examples import solar_farms_example, cropland_burn_risk_example
 
 
 async def get_mcda_prompt(query, bio, axis_data) -> str:
@@ -14,11 +14,17 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
             {solar_farms_example}
         """
 
+        Request: """Cropland burn risk"""
+
+        Response: """
+            {cropland_burn_risk_example}
+        """
+
         ## Detailed explanation of the task
 
         Complete the task following the next steps.
 
-        ### Step 1: Pick 2..6 indicators that will help to perform geospatial analysis requested by user
+        ### Step 1: Pick 2..4 indicators that will help to perform geospatial analysis requested by user
 
         The user's request is: """{user_query}""".
         When analyzing the user's query, first check if the request is meaningful. If the request appears to be random, or does not make sense as a valid request (e.g., gibberish or accidental typing), do not respond with an analysis. Instead, respond with {{"error": <reason why the input doesn't seem relevant or valid for analysis>}}. If the input is valid, proceed as usual.
@@ -31,9 +37,9 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         - Identify indicators that directly measure or are significantly impacted by the user's specific request, rather than those that are proxies or indirectly related.
         - Start with most important indicators.
         - Include the subject of analysis into the indicators list. e.g. Forest area for forest analysis, Hotels for hotel analysis.
-        - Avoid using more than 6 layers in the analysis.
+        - Avoid using more than 4 layers in the analysis.
         - Do not include the same indicator twice.
-        - Each indicator should add distinct and valuable insights to the analysis. Skip adding similar ones. e.g. population density and proximity to populated areas are interchangable: they both measure population density in different ways, it's redundant to include both.
+        - Each indicator should add distinct and valuable insights to the analysis. Skip adding similar ones. e.g. population density and proximity to populated areas are interchangeable: they both measure population density in different ways, it's redundant to include both. Similarly, avoid pairing "Number of days under cyclone impact, last year (n) (days)" with "Tropical Cyclone hazard (index)", or combining "Hazard & Exposure" layers with any "Number of days under X" layer, because they capture the same risk.
         - Ensure that ensure indicatos align with """{user_query}""" request, rather than the consequences or secondary effects.
         - Explain your picks in "comment" field. Provide brief explanations for each selected layer, directly linking it to the user's request.
         - Indicatos are provided with multiple normalization options (by area, by population, by roads, etc). Select only relevant normalization.
@@ -77,6 +83,7 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
     '''.format(
         axis_and_indicators_description=get_axis_description(axis_data),
         solar_farms_example=solar_farms_example,
+        cropland_burn_risk_example=cropland_burn_risk_example,
         user_bio=bio,
         user_query=query,
     )
