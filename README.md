@@ -8,18 +8,18 @@ cp .env.example .env
 
 edit .env
 
-Install virtualenv & requirements
+Install dependencies using Poetry. Poetry is configured to install packages
+into the system Python, so no virtual environment is created.
 
 ```shell
-virtualenv env
-. env/bin/activate
-pip install -r requirements.txt
+pip install poetry
+poetry config virtualenvs.create false
+poetry install
 ```
 
 Run server
 
 ```shell
-. env/bin/activate
 set -a; . <(grep -v '^#' .env | grep -v '^$' | sed -e "s/=/='/" -e "s/$/'/")
 python3 -m app.main
 ```

@@ -1,12 +1,14 @@
 FROM python:3.11
 
-COPY ./requirements.txt /app/requirements.txt
+WORKDIR /app
 
-RUN rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
+RUN pip install poetry
+COPY ./pyproject.toml /app/
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-interaction --no-ansi
 
-COPY ./app /app
-COPY ./tests /tests
+COPY ./app /app/app
+COPY ./tests /app/tests
 
 SHELL ["/bin/bash", "-c"]
-ENTRYPOINT python3 -m app.main
+ENTRYPOINT ["python3", "-m", "app.main"]
