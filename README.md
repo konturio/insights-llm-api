@@ -8,23 +8,23 @@ cp .env.example .env
 
 edit .env
 
-Install dependencies using Poetry. Poetry is configured to install packages
-into the system Python, so no virtual environment is created.
+Install dependencies using Poetry. Poetry will create a dedicated virtual
+environment for the project when installing packages.
 
 ```shell
 pip install poetry
-poetry config virtualenvs.create false
 poetry install
+poetry shell
 ```
 
-Run server
+Run server from within the Poetry shell
 
 ```shell
 set -a; . <(grep -v '^#' .env | grep -v '^$' | sed -e "s/=/='/" -e "s/$/'/")
 python3 -m app.main
 ```
 
-Run tests
+Run tests from the Poetry shell
 
 ```shell
 python tests/test_analytics.py
