@@ -14,7 +14,7 @@ environment for the project when installing packages.
 ```shell
 pip install poetry
 poetry install
-poetry env activate | eval
+`poetry env activate`
 ```
 
 Run server from within the Poetry shell
