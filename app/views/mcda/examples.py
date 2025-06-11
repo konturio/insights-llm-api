@@ -13,7 +13,7 @@ solar_farms_example = '''{
             "indicator_evaluation": "higher values are better"
         },
         {
-            "comment": "Chopping down forest for solar farm is economically inseafible",
+            "comment": "Chopping down forest for solar farm is economically infeasible",
             "axis_name": "Forest landcover (km²/km²)",
             "min": 0,
             "max": 1,
@@ -23,7 +23,7 @@ solar_farms_example = '''{
             "indicator_evaluation": "lower values are better"
         },
         {
-            "comment": "It is bad idea to put solar farm in disaster-prone area",
+            "comment": "It is a bad idea to put solar farm in disaster-prone area",
             "axis_name": "All disaster types exposure (days)",
             "min": 0,
             "max": 365,
@@ -33,7 +33,7 @@ solar_farms_example = '''{
             "indicator_evaluation": "lower values are better"
         },
         {
-            "comment": "Solar farms energy needs to be integrated into the grid using a substation",
+            "comment": "Solar farm energy needs to be integrated into the grid using a substation",
             "axis_name": "Proximity to power substations (m)",
             "min": 1,
             "max": 1200000,
@@ -59,7 +59,7 @@ solar_farms_example = '''{
             "max": 356,
             "numerator": "days_maxtemp_over_32c_1c",
             "denominator": "one",
-            "evaluation_hint": "Less hot days is good",
+            "evaluation_hint": "Fewer hot days are good",
             "indicator_evaluation": "lower values are better"
         },
         {
@@ -84,3 +84,41 @@ solar_farms_example = '''{
         }
     ]
 }'''
+
+cropland_burn_risk_example = '''{
+    "original_request": "Cropland burn risk",
+    "analysis_name": "Cropland Wildfire Risk Assessment",
+    "axes": [
+        {
+            "comment": "Drought increases the potential for cropland to burn. There's similar indicators: 'Drought hazard' (drought - index), 'Drought exposure' (drought_days_count).  Choosing `Drought exposure` to display more simple to interpret measure in days",
+            "axis_name": "Number of days under drought impact, last year (n)",
+            "min": 0,
+            "max": 363,
+            "numerator": "drought_days_count",
+            "denominator": "one",
+            "evaluation_hint": "More days of drought increase the risk of cropland burning.",
+            "indicator_evaluation": "lower values are better"
+        },
+        {
+            "comment": "High temperatures can enhance the risk of fires starting and spreading.",
+            "axis_name": "Air temperature maximum (°C)",
+            "min": -31,
+            "max": 48.599998474121094,
+            "numerator": "worldclim_max_temperature",
+            "denominator": "one",
+            "evaluation_hint": "Higher temperatures increase the risk of fires.",
+            "indicator_evaluation": "lower values are better"
+        },
+        {
+            "comment": "Cropland coverage directly relates to areas at risk of burning.",
+            "axis_name": "Cropland landcover to Area (km²/km²)",
+            "min": 2.5090622500482855e-8,
+            "max": 1.0000000002450673,
+            "numerator": "cropland",
+            "denominator": "area_km2",
+            "evaluation_hint": "More cropland area increases the potential risk of burns.",
+            "indicator_evaluation": "higher values are better"
+        }
+    ]
+}'''
+
