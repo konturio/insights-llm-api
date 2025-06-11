@@ -8,23 +8,23 @@ cp .env.example .env
 
 edit .env
 
-Install virtualenv & requirements
+Install dependencies using Poetry. Poetry will create a dedicated virtual
+environment for the project when installing packages.
 
 ```shell
-virtualenv env
-. env/bin/activate
-pip install -r requirements.txt
+pip install poetry
+poetry install
+poetry env activate | eval
 ```
 
-Run server
+Run server from within the Poetry shell
 
 ```shell
-. env/bin/activate
 set -a; . <(grep -v '^#' .env | grep -v '^$' | sed -e "s/=/='/" -e "s/$/'/")
 python3 -m app.main
 ```
 
-Run tests
+Run tests from the Poetry shell
 
 ```shell
 python tests/test_analytics.py
