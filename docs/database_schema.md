@@ -40,3 +40,4 @@ Tracks what users clicked in the search results.
 | `selected_feature`    | jsonb | Chosen location       |
 | `selected_feature_type` | text | Type of the feature   |
 
+This table is currently unused because the frontend does not yet store user clicks.

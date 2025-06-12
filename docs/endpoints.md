@@ -32,6 +32,7 @@ Save a user's search choice.
 The request contains the same data that `/search` returns plus the selected
 feature.
 
+This endpoint is currently unused because the frontend has not been implemented yet.
 ## `GET /mcda-suggestion`
 Returns a multi‑criteria decision analysis (MCDA) configuration.
 
