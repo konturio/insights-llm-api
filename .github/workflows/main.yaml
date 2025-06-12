@@ -23,7 +23,7 @@ jobs:
         run: |
           IMAGE_TAG="${{ github.ref_name }}.${{ steps.get-cloned.outputs.SHA }}.${{ github.run_attempt }}"
           # replace slashes and invalid characters with hyphens
-          IMAGE_TAG="$(echo "$IMAGE_TAG" | tr '/ ' '--' | tr -cs 'A-Za-z0-9_.-' '-' )"
+          IMAGE_TAG="$(echo "$IMAGE_TAG" | tr '/ ' '--' | tr -cs 'A-Za-z0-9_.-' '-' | sed 's/-$//')"
           # docker tags must start with alphanumeric character
           IMAGE_TAG="$(echo "$IMAGE_TAG" | sed 's/^[^A-Za-z0-9]*//')"
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
