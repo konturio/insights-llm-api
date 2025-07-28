@@ -45,6 +45,8 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         - Ensure that ensure indicatos align with """{user_query}""" request, rather than the consequences or secondary effects.
         - Explain your picks in "comment" field. Provide brief explanations for each selected layer, directly linking it to the user's request.
         - Indicatos are provided with multiple normalization options (by area, by population, by roads, etc). Select only relevant normalization.
+        - Use layerSpatialRes to match the scale of the user's question: "where on the planet" can rely on admin_national layers, "in which city of the country" requires at least admin_subnational or grid_coarse, "where in the city" demands feature_derived or grid_fine. You may select more detailed layers but never less detailed ones.
+        - Keep in mind layerTemporalExt, some indicators cover only a specific time range.
 
         ### Step 2: create a name for analysis
 
@@ -98,16 +100,43 @@ def get_axis_description(axis_data: dict) -> str:
             'axis_name': x['label'],
             'min': x['datasetStats']['minValue'],
             'max': x['datasetStats']['maxValue'],
-    #        'mean': x['datasetStats']['mean'],
-    #        'stddev': x['datasetStats']['stddev'],
+#        'mean': x['datasetStats']['mean'],
+#        'stddev': x['datasetStats']['stddev'],
             'numerator': x['quotients'][0]['name'],
             'denominator': x['quotients'][1]['name'],
-            'description': x['quotients'][0]['description']
+            'description': x['quotients'][0]['description'],
+            'layerSpatialRes': x['quotients'][0]['layerSpatialRes'],
+            'layerTemporalExt': x['quotients'][0]['layerTemporalExt'],
         }
         for x in sorted(axis_data['data']['getAxes']['axis'], key=lambda a: a['quality'] or 0, reverse=True)
         if (x['quality'] and x['quality'] > 0.5
                 and x['quotients'][1]['name'] != 'populated_area_km2')  # weird denominator, area_km2 replaces it for any analysis
     ]
+
+    layer_spatial_res_table = '''
+        |value|meaning|
+        |---|---|
+        |admin_national|one value per country (ISO 3166-1 boundary)|
+        |admin_subnational|any aggregated admin unit below the country level (admin-1, admin-2, counties, districts…)|
+        |grid_coarse|regularly-spaced rasters or H3 > ≈1 km (250 m GHS-POP counts as coarse once aggregated)|
+        |grid_fine|rasters or H3 ≤ ≈1 km (250 m, 100 m, 30 m, etc.)|
+        |feature_derived|counts, densities or proximities based on discrete features (points, lines, polygons)|
+    '''
+
+    layer_temporal_ext_table = '''
+        |value|meaning|
+        |---|---|
+        |static|fixed value; doesn’t move with the calendar|
+        |historical_static|fixed multi-year climatology or census baseline compiled >10 years ago; doesn’t move with the calendar|
+        |snapshot_year|a single named year (often last authoritative release)|
+        |rolling_2_years|moving 2-year window ending “today”|
+        |rolling_year|moving 365-day window ending “today”|
+        |rolling_6_months|moving 6-month (or 183-day) window|
+        |rolling_month|moving 30-day (or 4-week) window|
+        |current_value|latest single measurement, updated continuously|
+        |cumulative_to_date|running total from the first record up to now; only increases (or steps down on data corrections)|
+        |future_projection|any modelled future scenario (RCP, SSP, +2 °C, 2050-forecast)|
+    '''
 
     return '''
         ## System datasets
@@ -117,7 +146,15 @@ def get_axis_description(axis_data: dict) -> str:
             {axes}
         """
 
+        layerSpatialRes values:
+        {layer_spatial_res_table}
+
+        layerTemporalExt values:
+        {layer_temporal_ext_table}
+
         Note that "Proximity to X" indicators are usually measured in m or km, it's literally distance. Higher values represent greater distance, lower values are smaller distance.
     '''.format(
         axes='\n'.join(str(a) for a in axes),
+        layer_spatial_res_table=layer_spatial_res_table,
+        layer_temporal_ext_table=layer_temporal_ext_table,
     )
