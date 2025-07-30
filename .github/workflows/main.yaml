@@ -29,7 +29,22 @@ jobs:
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
+      - name: Check Nexus credentials
+        id: creds
+        run: |
+          if [ -n "$NEXUS_DEPLOYER" ] && [ -n "$NEXUS_DEPLOYER_PASS" ]; then
+            echo "Nexus credentials detected"
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nexus credentials missing, skipping image push"
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          NEXUS_DEPLOYER: ${{ secrets.NEXUS_DEPLOYER }}
+          NEXUS_DEPLOYER_PASS: ${{ secrets.NEXUS_DEPLOYER_PASS }}
+
       - name: Logging into Nexus Container Registry
+        if: steps.creds.outputs.available == 'true'
         uses: docker/login-action@v2
         with:
           registry: nexus.kontur.io:8085
@@ -48,7 +63,7 @@ jobs:
         uses: docker/build-push-action@v3.0.0
         with:
           context: .
-          push: true
+          push: ${{ steps.creds.outputs.available == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
