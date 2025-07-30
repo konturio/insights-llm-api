@@ -32,16 +32,13 @@ jobs:
       - name: Check Nexus credentials
         id: creds
         run: |
-          if [ -n "$NEXUS_DEPLOYER" ] && [ -n "$NEXUS_DEPLOYER_PASS" ]; then
+          if [ -n "${{ secrets.NEXUS_DEPLOYER }}" ] && [ -n "${{ secrets.NEXUS_DEPLOYER_PASS }}" ]; then
             echo "Nexus credentials detected"
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "Nexus credentials missing, skipping image push"
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
-        env:
-          NEXUS_DEPLOYER: ${{ secrets.NEXUS_DEPLOYER }}
-          NEXUS_DEPLOYER_PASS: ${{ secrets.NEXUS_DEPLOYER_PASS }}
 
       - name: Logging into Nexus Container Registry
         if: steps.creds.outputs.available == 'true'
