@@ -1,5 +1,7 @@
 # LLM analytics
 
+API and database schema are documented in the [docs](docs/) directory.
+
 ### Local run
 
 ```shell

@@ -2,7 +2,7 @@ from .examples import solar_farms_example, cropland_burn_risk_example
 
 
 async def get_mcda_prompt(query, bio, axis_data) -> str:
-    ''' MCDA Wizard assistant knows termonilogy and has instructions on what to do with axis data '''
+    '''MCDA Wizard assistant knows terminology and has instructions on what to do with axis data.'''
     return '''
         {axis_and_indicators_description}
 
@@ -41,10 +41,10 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         - Do not include the same indicator twice.
         - Each indicator should add distinct and valuable insights to the analysis. Skip adding similar ones. e.g. population density and proximity to populated areas are interchangeable: they both measure population density in different ways, it's redundant to include both.
         - When indicators get colored, the map gets unreadable, because indicators similar in meaning reduce contrast. Do not include indicators capturing the same risk. Avoid pairing "Number of days under cyclone impact, last year (n) (days)" with "Tropical Cyclone hazard (index)", or combining "Hazard & Exposure" layers with any "Number of days under X" layer, because they capture the same risk and provide overlapping insights. When deciding between similar indicators, explain your choice in comment.
-        - Diversity of insights and avoidance of duplicate perspectives within a category of risk is crucial - pick diverse indicatos.
-        - Ensure that ensure indicatos align with """{user_query}""" request, rather than the consequences or secondary effects.
+        - Diversity of insights and avoidance of duplicate perspectives within a category of risk is crucial – pick diverse indicators.
+        - Ensure that indicators align with """{user_query}""" request, rather than the consequences or secondary effects.
         - Explain your picks in "comment" field. Provide brief explanations for each selected layer, directly linking it to the user's request.
-        - Indicatos are provided with multiple normalization options (by area, by population, by roads, etc). Select only relevant normalization.
+        - Indicators are provided with multiple normalization options (by area, by population, by roads, etc). Select only relevant normalization.
         - Use layerSpatialRes to match the scale of the user's question: "where on the planet" can rely on admin_national layers, "in which city of the country" requires at least admin_subnational or grid_coarse, "where in the city" demands feature_derived or grid_fine. You may select more detailed layers but never less detailed ones.
         - Keep in mind layerTemporalExt, some indicators cover only a specific time range.
 
@@ -91,7 +91,8 @@ async def get_mcda_prompt(query, bio, axis_data) -> str:
         user_bio=bio,
         user_query=query,
     )
-    # TODO explain min max sttdev
+    # min, max and stddev values describe an indicator's distribution and help
+    # tune visualization scales.
 
 
 def get_axis_description(axis_data: dict) -> str:

@@ -7,8 +7,8 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "^3.13"
 asyncpg = "^0.30"
-aiohttp = "^3.12.12"
-starlette = "^0.46.2"
+aiohttp = "^3.12.14"
+starlette = "^0.47.2"
 uvicorn = "^0.34.2"
 ujson = "^5.4.0"
 sentry-sdk = {version = "^2.0.0", extras = ["starlette"]}
