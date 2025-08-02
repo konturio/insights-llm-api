@@ -10,15 +10,6 @@ from app.logger import LOGGER
 
 settings = Settings()
 
-indicators_graphql = """
-{
-  polygonStatistic (polygonStatisticRequest: {polygon: "%s"})
-  {
-      bivariateStatistic{indicators{name, label, description, emoji, unit{longName}}}
-  }
-}
-"""
-
 advanced_analytics_graphql = """
 {
   polygonStatistic (polygonStatisticRequest: {polygon: "%s"})
@@ -66,6 +57,8 @@ axis_graphql = """
                     shortName
                     longName
                 }
+                layerSpatialRes
+                layerTemporalExt
             }
             transformation {
                 transformation
@@ -118,10 +111,10 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
         world_task = asyncio.create_task(
             query_insights_api(session, advanced_analytics_graphql)
         )
-        metadata_task = asyncio.create_task(
-            query_insights_api(session, indicators_graphql)
+        axes_task = asyncio.create_task(
+            query_insights_api(session, axis_graphql)
         )
-        tasks = [selected_task, world_task, metadata_task]
+        tasks = [selected_task, world_task, axes_task]
 
         reference_task = None
         if reference_area:
@@ -130,23 +123,24 @@ async def get_analytics_sentences(selected_area: dict, reference_area: dict) -> 
             )
             tasks.append(reference_task)
 
-        analytics_selected_area, analytics_world, metadata, *rest = await asyncio.gather(*tasks)
+        analytics_selected_area, analytics_world, axes, *rest = await asyncio.gather(*tasks)
         LOGGER.debug('got selected_area analytics with resolution %s', get_analytics_resolution(analytics_selected_area))
         LOGGER.debug('got world analytics')
-        LOGGER.debug('got indicators metadata')
+        LOGGER.debug('got axes')
         analytics_reference_area = rest[0] if reference_area else {}
         if reference_area:
             LOGGER.debug('got reference_area analytics with resolution %s', get_analytics_resolution(analytics_reference_area))
 
-    metadata = {
-        x['name']: {
-            'unit': x['unit']['longName'],
-            'emoji': x['emoji'],
-            'label': x['label'],
-            'description': x['description'],
-        }
-        for x in metadata['data']['polygonStatistic']['bivariateStatistic']['indicators']
-    }
+    metadata = {}
+    for axis in axes['data']['getAxes']['axis']:
+        num, den = axis['quotients']
+        if num['name'] not in metadata:
+            metadata[num['name']] = {
+                'unit': num['unit']['longName'],
+                'emoji': num['emoji'],
+                'label': num['label'],
+                'description': num['description'],
+            }
     calculations_world = flatten_analytics(analytics_world, metadata)
     calculations_selected_area = flatten_analytics(analytics_selected_area, metadata)
     calculations_reference_area = flatten_analytics(analytics_reference_area, metadata) if reference_area else {}
